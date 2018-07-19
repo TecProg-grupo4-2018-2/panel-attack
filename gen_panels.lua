@@ -5,12 +5,15 @@ local random = math.random
 -- stuff should have first_seven, metal, vs_mode, metal_col, prev_metal_col
 function make_panels(ncolors, prev_panels, stuff)
   --print("make_panels("..ncolors..", "..prev_panels..", "..(stuff.first_seven or "")..")")
-  local ret = prev_panels
   local rows_to_make = 20
   local rows_to_place_metal_locations = rows_to_make
   if ncolors < 2 then return end
   local cut_panels = false
-
+  local prev_panel_numbers = ""
+  for i=1,#prev_panels do
+    prev_panel_numbers = prev_panel_numbers..panel_color_to_number[string.sub(prev_panels, i, i)]
+  end
+  local ret = prev_panel_numbers
   if prev_panels == "000000" then
     if stuff.first_seven then
       ret = stuff.first_seven
@@ -25,18 +28,19 @@ function make_panels(ncolors, prev_panels, stuff)
       local nogood,color = true
       while nogood do
         color = (y==stuff.metal_col) and 8 or tostring(math.random(1,ncolors))
+        --print("y: "..y.."  color: "..color.."string.sub(ret,-1,-1): "..string.sub(ret,-1,-1).."stuff.level: "..stuff.level.."  stuff.mode: "..stuff.mode)
         nogood = (prevtwo and color == string.sub(ret,-1,-1)) or
           color == string.sub(ret,-6,-6) or
-          (y>0 and color == string.sub(ret,-1,-1) and stuff.mode == "vs" and stuff.level > 7)
+          (y>0 and color == string.sub(ret,-1,-1) and (stuff.vs_mode or stuff.mode == "vs") and stuff.level > 7)
       end
       ret = ret..color
     end
   end
-  --print("panels before potential metal panel position assignments:")
-  --print(ret)
+  print("panels before potential metal panel position assignments:")
+  print(ret)
   --assign potential metal panel placements
   local row_width = 6 --this may belong in globals if we were to ever make a game mode with a different width
-  local new_ret = "000000"
+  local new_ret = prev_panels
   local new_row
   local prev_row
   for i=2,rows_to_place_metal_locations+1 do
