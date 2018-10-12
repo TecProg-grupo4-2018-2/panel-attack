@@ -49,6 +49,7 @@ function close_socket()
 end
 
 --- Parse each type of message to game state
+-- if leftovers == 0 the function return nil
 -- @function get_message
 -- @param nil
 -- @return nil
@@ -61,9 +62,10 @@ function get_message()
     local kind, gap, length = string.sub(leftovers,1,1), 0
     local byte = string.byte
 
-        -- @todo understand all of this lenght parse
+        -- @todo unders'tand all of this lenght parse
     local type_to_length = {G=1, H=1, N=1, E=4, P=121, O=121, I=2, Q=121,
 						R=121, L=2, U=2}
+
     -- "J" represent json in code
     if kind == 'J' then
         if string.len(leftovers) >= 4 then
@@ -71,6 +73,8 @@ function get_message()
             	byte(string.sub(leftovers,3,3)) * BITS_256 +
             	byte(string.sub(leftovers,4,4))
             print('json message has length '.. length)
+
+            assert(type(gap) == "number", "Gap is not a number")
             gap = 3
         else
             return nil
@@ -78,6 +82,7 @@ function get_message()
     else
         length = type_to_length[kind] - 1
     end
+
     -- Verify string length leftovers
     if length + gap + 1 > string.len(leftovers) then
         return nil
@@ -87,6 +92,7 @@ function get_message()
     leftovers = string.sub(leftovers,length+gap+2)
 
     return kind, devolution
+
 end
 
 --- queue of data in connection
@@ -101,14 +107,23 @@ function send_net(...)
     local MAX_BUFFER = 70
 
     if not STONER_MODE then
-        TCP_sock:send(...)
+        local response, data = pcall(
+          TCP_sock:send(...)
+        )
+
+        assert(response and data, "There's something wrong with send_net function")
     else
+        assert(lag_queue, "lag_queue is nil")
         lag_queue:push({...})
 
         -- trick for dont buffer
         -- @todo refactor this
         if lag_queue:len() == MAX_BUFFER then
-            TCP_sock:send(unpack(lag_queue:pop()))
+            local response, data = pcall(
+              TCP_sock:send(unpack(lag_queue:pop()))
+            )
+
+            assert(response and data)
         end
     end
 end
@@ -121,6 +136,8 @@ BITS_256 = 256
 -- @param obj
 -- @return nil
 function send_json(obj)
+
+    assert(obj, "JSON object is nil")
 
     local json = json.encode(obj) -- Recieve a object and encode to json
     local json_length = json:len() -- Get json length
@@ -139,11 +156,17 @@ end
 -- @return nil
 function undo_stonermode()
     while lag_queue:len() ~= 0 do
-        TCP_sock:send(unpack(lag_queue:pop()))
+
+        local response, data = pcall(
+          TCP_sock:send(unpack(lag_queue:pop()))
+        )
+
+        assert(response and data, "Something wrong with undo_stonermode message")
     end
 end
 
-local got_H = false
+local got_H = false        send_net('I'..to_send)
+
 
 --- map of functions
 --- @todo understand this
@@ -166,6 +189,7 @@ local process_message = {
     J = function(s)
         local current_message = json.decode(s)
         this_frame_messages[#this_frame_messages+1] = current_message
+
         print('JSON LOL '..s)
         -- current_message should be false, if not have error
         if not current_message then
@@ -190,6 +214,10 @@ local process_message = {
 function network_init(ip)
     TCP_sock = socket.tcp()
     TCP_sock:settimeout(7)
+
+    assert(ip, "invalid IP for socket")
+    assert(TCP_sock, "TCP_sock is nil in network_init function")
+
     -- Verify TCP connection
     if not TCP_sock:connect(ip,49569) then
         error('Failed to connect =(')
@@ -299,11 +327,15 @@ end
 -- @param prev_panel actual state of panels
 -- @return nil
 function make_local_panels(stack, prev_panels)
+
+    assert(stack, "Stack is nil")
+    assert(prev_panels, "Has no prev_panel")
+
     local ret = make_panels(stack.NCOLORS, prev_panels, stack)
 
     stack.panel_buffer = stack.panel_buffer .. ret
 
-	local replay = replay[P1.mode]
+     local replay = replay[P1.mode]
 
     if replay and replay.pan_buf then
         replay.pan_buf = replay.pan_buf .. ret
