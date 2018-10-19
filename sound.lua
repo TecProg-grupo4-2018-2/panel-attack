@@ -1,5 +1,15 @@
--- sets the volume of a single source or table of sources
+--- Sound module
+--- Handle sound effects, stage and charactes themes and volume of the game
+
+---  This function sets the volume of a single source or table of sources
+-- @function set_volume
+-- @param source of sound
+-- @param new volume to be set
+-- @return nil
 function set_volume(source, new_volume)
+    -- Conditional with debug purposes
+    assert(new_volume)
+    assert(source)
     if config.debug_mode then print("set_volume called") end
     if type(source) == "table" then
       for _,volume in pairs(source) do
@@ -10,32 +20,46 @@ function set_volume(source, new_volume)
     end
 end
 
--- returns a new sound effect if it can be found, else returns nil
+--- This function returns a new sound effect if it can be found, else returns nil
+-- @function find_sound
+-- @param sound name
+-- @param directories to be check
+-- @return nil
 function find_sound(sound_name, directories_to_check)
     local found_source
+    assert(sound_name, "File could not be founded")
+    assert(directories_to_check)
     for search_SFX,directory in ipairs(directories_to_check) do
       found_source = check_supported_extensions(directory..sound_name)
       if found_source then
+        assert(found_source)
         return found_source
       end
     end
     return nil
 end
 
+--- This function check directories that may have the desired sound effect
+-- @function find_generic_SFX
+-- @param SFX_sound_name to search in directories
+-- @return source of the SFX Sound
 function find_generic_SFX(SFX_sound_name)
-    local DIRECTORIES_TO_CHECK = {
+    local DIRECTORIES_TO_CHECK = assert({
         "sounds/"..sounds_dir.."/SFX/",
         "sounds/"..default_sounds_dir.."/SFX/"
-    }
+    })
+    assert(SFX_sound_name)
     return find_sound(SFX_sound_name, DIRECTORIES_TO_CHECK)
 end
 
+-- This function search for sound effects and then match it with specific character
 function find_character_SFX(character, SFX_sound_name)
-    local DIRECTORIES_TO_CHECK = {
+    local DIRECTORIES_TO_CHECK = assert({
         "sounds/"..sounds_dir.."/characters/",
         "sounds/"..default_sounds_dir.."/characters/"
-    }
-  
+    })
+    assert(SFX_sound_name)
+    assert(character)
     -- variable initialized but never used in this file
     local cur_dir_contains_chain
   
@@ -49,27 +73,32 @@ function find_character_SFX(character, SFX_sound_name)
       local current_directory_has_combo_sound = check_supported_extensions(currentDirectory.."/"..character.."/combo")
       local other_requested_SFX = check_supported_extensions(currentDirectory.."/"..character.."/"..SFX_sound_name)
 
+
+      -- Conditionals to check tha directories has specific sound effects
       -- SFXSounName probably a misspelled global variable
       if SFXSounName == "chain" and current_directory_has_chain_sound then 
         if config.debug_mode then print("loaded "..SFX_sound_name.." for "..character) end
+        assert(current_directory_has_chain_sound)
         return current_directory_has_chain_sound
       end
-    
-    
       if SFX_sound_name == "combo" and current_directory_has_combo_sound then 
         if config.debug_mode then print("loaded "..SFX_sound_name.." for "..character) end
+        assert(current_directory_has_combo_sound)
         return current_directory_has_combo_sound
       elseif SFX_sound_name == "combo" and current_directory_has_chain_sound then
         if config.debug_mode then print("substituted found chain SFX for "..SFX_sound_name.." for "..character) end
+        assert(current_directory_has_chain_sound)
         return current_directory_has_chain_sound -- in place of the combo SFX
       end
       if SFX_sound_name == "chain" and current_directory_has_combo_sound then
         if config.debug_mode then print("substituted found combo SFX for "..SFX_sound_name.." for "..character) end
+        assert(current_directory_has_combo_sound)
         return current_directory_has_combo_sound
       end
     
       if other_requested_SFX then
         if config.debug_mode then print("loaded "..SFX_sound_name.." for "..character) end
+        assert(other_requested_SFX)
         return other_requested_SFX
       else
         if config.debug_mode then print("did not find "..SFX_sound_name.." for "..character.." in current directory: "..current_dir) end
@@ -85,12 +114,17 @@ function find_character_SFX(character, SFX_sound_name)
     return nil
 end
 
--- returns audio source based on character and music_type (normal_music, danger_music, normal_music_start, or danger_music_start)
+--- This function returns audio source based on character and music_type (normal_music, danger_music, normal_music_start, or danger_music_start)
+-- @function find_music
+-- @param character
+-- @param type of the music
+-- @return nil
 function find_music(character, music_type)
   
     local found_source
     local character_theme_overrides_stage_theme = check_supported_extensions("sounds/"..sounds_dir.."/characters/"..character.."/normal_music")
   
+    -- Conditionals to select if the character sound theme needs to overrides the current stage sound theme  
     if character_theme_overrides_stage_theme then
       found_source = check_supported_extensions("sounds/"..sounds_dir.."/characters/"..character.."/"..music_type)
       if found_source then
@@ -98,6 +132,7 @@ function find_music(character, music_type)
       else
         if config.debug_mode then print("In selected sound directory, did not find "..music_type.." for "..character) end
       end
+      assert(found_source)
       return found_source
     else
       if stages[character] then
@@ -121,15 +156,19 @@ function find_music(character, music_type)
           return found_source
         end
       end
+      assert(found_source)
       return found_source
     end
     return nil
 end
 
--- returns a source, or nil if it could not find a file
+--- This function returns a source, or nil if it could not find a file
+-- @function check_supported_extensions
+-- @param path and filename of the sound source
+-- @return new source of sounds effects
 function check_supported_extensions(path_and_filename)
   
-    SUPPORTED_SOUND_FORMAT = {".mp3",".ogg", ".it"}
+    SUPPORTED_SOUND_FORMAT = assert({".mp3",".ogg", ".it"}, "Not a supported sound type")
 
     for k, extension in ipairs(SUPPORTED_SOUND_FORMAT) do
       if love.filesystem.isFile(path_and_filename..extension) then
@@ -143,9 +182,13 @@ function check_supported_extensions(path_and_filename)
     return nil
 end
 
+--- This function asserts that all required generic sound effects exists
+-- @function assert_requirements_met()
+-- @param nil
+-- @return nil
 function assert_requirements_met()
-    -- assert we have all required generic sound effects
-    local SFX_REQUIREMENTS =  {"cur_move", "swap", "fanfare1", "fanfare2", "fanfare3", "game_over"}
+
+    local SFX_REQUIREMENTS =  assert({"cur_move", "swap", "fanfare1", "fanfare2", "fanfare3", "game_over"})
     local NUMBER_REQUIRED_GARBAGE_THUDS = 3
 
     for k,SFX_sounds in ipairs(SFX_REQUIREMENTS) do
@@ -171,26 +214,37 @@ function assert_requirements_met()
     end
   end
 
+--- This function stops all sounds related to characters
+-- @function stop_character_sounds
+-- @param character with sound related playing
+-- @return nil
 function stop_character_sounds(character)
+    -- global variables
     danger_music_intro_started = nil
     danger_music_intro_finished = nil
     danger_music_intro_playing = nil
     normal_music_intro_exists = nil
     normal_music_intro_started = nil
     normal_music_intro_finished = nil
-  
+    assert(character)
     for characterSFX, sound in ipairs(allowed_SFX_character) do
+        -- Conditional that get a sound effect and then stop it
         if sounds.SFX.characters[character][sound] then
             sounds.SFX.characters[character][sound]:stop()
         end
     end
     for characterMusic, musicType in ipairs(allowed_character_music) do
+        -- Conditional that get a character theme and then stop it
         if sounds.music.characters[character][musicType] then
             sounds.music.characters[character][musicType]:stop()
         end
     end
 end
 
+--- This function initializes the sounds and sets variables with sound effects used all over other functions in this file
+-- @function sound_init()
+-- @param nil
+-- @return nil
 function sound_init()
     default_sounds_dir = "Stock PdP_TA"
     sounds_dir = config.sounds_dir or default_sounds_dir
