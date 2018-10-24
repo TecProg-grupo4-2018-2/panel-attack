@@ -4,6 +4,7 @@
 -- @module graphics 
 
 require("input")
+require("constants")
 local ceil = math.ceil --rounding
 local len_garbage = #garbage_bounce_table --length of lua garbage
 
@@ -18,12 +19,12 @@ function load_img(image_path)
     -- if the path doesn't exist, creates the path 
     if pcall(
         function ()
-            img = love.image.newImageData("assets/"..(config.assets_dir or
+            img = love.image.newImageData("assets/"..(CONFIG_TABLE.assets_dir or
                                             default_assets_dir).."/"..image_path)
         end) then
 
-        if config.assets_dir and config.assets_dir ~= default_assets_dir then
-            print("loaded custom asset: "..config.assets_dir.."/"..image_path)
+        if CONFIG_TABLE.assets_dir and CONFIG_TABLE.assets_dir ~= default_assets_dir then
+            print("loaded custom asset: "..CONFIG_TABLE.assets_dir.."/"..image_path)
         end
     else
         img = love.image.newImageData("assets/"..default_assets_dir.."/"..
@@ -331,7 +332,7 @@ function graphics_init()
     character_display_names = {} -- players names 
 
     for k, original_name in ipairs(characters) do
-        name_txt_file = love.filesystem.newFile("assets/"..config.assets_dir..
+        name_txt_file = love.filesystem.newFile("assets/"..CONFIG_TABLE.assets_dir..
                                                "/"..original_name.."/name.txt")
         open_success, err = name_txt_file:open("r")
         local display_name = name_txt_file:read(name_txt_file:getSize())
@@ -400,7 +401,7 @@ function Stack.render(self)
     assert(self)
     local mouse_x, mouse_y -- coordinates of mouse
 
-    if config.debug_mode then
+    if CONFIG_TABLE.debug_mode then
         mouse_x,mouse_y = love.mouse.getPosition()
         mouse_x = mouse_y / GFX_SCALE
         mouse_y = mouse_y / GFX_SCALE
@@ -506,7 +507,7 @@ function Stack.render(self)
                     end
 
                     -- this adds the drawing of state flags to garbage panels 
-                    if config.debug_mode then
+                    if CONFIG_TABLE.debug_mode then
                         gprint(panel.state, draw_x*3, draw_y*3)
                         if panel.match_anyway ~= nil then
                             gprint(tostring(panel.match_anyway), draw_x*3, 
@@ -552,7 +553,7 @@ function Stack.render(self)
 
                     draw(IMG_panels[panel.color][draw_frame], draw_x, draw_y)
 
-                    if config.debug_mode then
+                    if CONFIG_TABLE.debug_mode then
                         gprint(panel.state, draw_x*3, draw_y*3)
                         if panel.match_anyway ~= nil then
                             gprint(tostring(panel.match_anyway), draw_x*3, 
@@ -568,7 +569,7 @@ function Stack.render(self)
                 end
             end
 
-            if config.debug_mode and mx >= draw_x and mx < draw_x + 16 and 
+            if CONFIG_TABLE.debug_mode and mx >= draw_x and mx < draw_x + 16 and 
                     my >= draw_y and my < draw_y + 16 then
                 mouse_panel = {row, col, panel}
                 draw(IMG_panels[4][1], draw_x+16/3, draw_y+16/3, 0, 0.33333333,
@@ -604,23 +605,23 @@ function Stack.render(self)
         gprint("Stop: "..self.stop_time, self.score_x, 205)
         gprint("Pre stop: "..self.pre_stop_time, self.score_x, 220)
 
-        if config.debug_mode and self.danger then
+        if CONFIG_TABLE.debug_mode and self.danger then
             gprint("danger", self.score_x,235)
         end
 
-        if config.debug_mode and self.danger_music then
+        if CONFIG_TABLE.debug_mode and self.danger_music then
             gprint("danger music", self.score_x, 250)
         end
 
-        if config.debug_mode then
+        if CONFIG_TABLE.debug_mode then
             gprint("cleared: "..(self.panels_cleared or 0), self.score_x, 265)
         end
 
-        if config.debug_mode then
+        if CONFIG_TABLE.debug_mode then
             gprint("metal q: "..(self.metal_panels_queued or 0), self.score_x, 280)
         end
 
-        if config.debug_mode and self.input_state then
+        if CONFIG_TABLE.debug_mode and self.input_state then
             local iraise, iswap, iup, idown, ileft, iright = unpack(base64decode[self.input_state])
             local inputs_to_print = "inputs:"
 

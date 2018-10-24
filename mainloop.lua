@@ -3,6 +3,8 @@
 -- Contains all the functions responsible for the implementation of the game's main loop.
 -- @module mainloop
 
+require("constants")
+
 local coroutine_wait = coroutine.yield
 local coroutine_resume = coroutine.resume
 
@@ -18,13 +20,13 @@ local spectator_list = nil
 local debug_mode_text = {[true]="On", [false]="Off"}  
 
 
---- Loads the game's resources
+--- Loads the game's resources, such as config files, sound components and graphics
 -- @tparam nil
 -- @treturn nil
 function load_game_resources()
     local func, arg = main_select_mode, nil
     replay = {}
-    config = {character="lip", level=5, name="defaultname", master_volume=100, SFX_volume=100, music_volume=100, debug_mode=false, save_replays_publicly = "with my name", assets_dir=default_assets_dir}
+
     gprint("Reading config file", 300, 280)
     coroutine_wait()
     read_conf_file() --  @todo stop making new config files
@@ -727,7 +729,7 @@ function main_character_select()
     local up, down, left, right = {-1, 0}, {1, 0}, {0, -1}, {0, 1}
 
     my_state = global_my_state or
-        {character=config.character, level=config.level, cursor="level", ready=false}
+        {character=CONFIG_TABLE.character, level=CONFIG_TABLE.level, cursor="level", ready=false}
 
     global_my_state = nil
     my_win_count = my_win_count or 0
@@ -1202,12 +1204,12 @@ function main_character_select()
                     if not selected then move_cursor(down) end
                     elseif menu_key_left(k) then
                         if selected and active_str == "level" then
-                            config.level = bound(1, config.level - 1, 10)
+                            CONFIG_TABLE.level = bound(1, CONFIG_TABLE.level - 1, 10)
                         end
                     if not selected then move_cursor(left) end
                     elseif menu_key_right(k) then
                         if selected and active_str == "level" then
-                            config.level = bound(1, config.level + 1, 10)
+                            CONFIG_TABLE.level = bound(1, CONFIG_TABLE.level + 1, 10)
                 end
             -- handles keys input
             if not selected then move_cursor(right) end
@@ -1221,11 +1223,11 @@ function main_character_select()
                         return main_select_mode
                 end
             elseif active_str == "random" then
-                config.character = uniformly(characters)
+                CONFIG_TABLE.character = uniformly(characters)
             elseif active_str == "match type desired" then
-                config.ranked = not config.ranked
+                CONFIG_TABLE.ranked = not CONFIG_TABLE.ranked
             else
-                config.character = active_str
+                CONFIG_TABLE.character = active_str
                 --When we select a character, move cursor to "ready"
                 active_str = "ready"
                 cursor = shallowcpy(name_to_xy["ready"])
@@ -1244,7 +1246,7 @@ function main_character_select()
             end
 
             active_str = map[cursor[1]][cursor[2]]
-            my_state = {character=config.character, level=config.level, cursor=active_str, ranked=config.ranked,
+            my_state = {character=CONFIG_TABLE.character, level=CONFIG_TABLE.level, cursor=active_str, ranked=CONFIG_TABLE.ranked,
                         ready=(selected and active_str=="ready")}
             
             if character_select_mode == "2p_net_vs" and not content_equal(my_state, prev_state) 
@@ -1401,7 +1403,7 @@ function main_net_vs_lobby()
         menu_options = {}
         
         for _, v in ipairs(unpaired_players) do
-            if v ~= config.name then
+            if v ~= CONFIG_TABLE.name then
                 menu_options[#menu_options + 1] = v
             end
         end
@@ -1498,7 +1500,7 @@ function main_net_vs_lobby()
                 showing_leaderboard = false --toggle it off
             end
         elseif active_idx <= lastPlayerIndex then
-            my_name = config.name
+            my_name = CONFIG_TABLE.name
             op_name = menu_options[active_idx]
             currently_spectating = false
             request_game(menu_options[active_idx])
@@ -1600,10 +1602,10 @@ end
 -- @return function main_net_vs
 function main_net_vs_setup(ip)
     assert(ip, "Main net vs setup param is nil")
-    if not config.name then
+    if not CONFIG_TABLE.name then
         return main_set_name
     else 
-        my_name = config.name
+        my_name = CONFIG_TABLE.name
     end
 
     P1, P1_level, P2_level, got_opponent = nil, nil, nil, nil
@@ -1724,7 +1726,7 @@ function main_net_vs()
         gprint("Wins: "..my_win_count, 315, 70)
         gprint("Wins: "..op_win_count, 410, 70)
 
-        if not config.debug_mode then --this is printed in the same space as the debug details
+        if not CONFIG_TABLE.debug_mode then --this is printed in the same space as the debug details
             gprint(spectators_string, 315, 265)
         end
         
@@ -1938,7 +1940,7 @@ end
 -- @treturn function
 -- @return fuction main_caracter_select
 function main_local_vs_yourself_setup()
-    my_name = config.name or "Player 1"
+    my_name = CONFIG_TABLE.name or "Player 1"
     op_name = nil
     op_state = nil
     character_select_mode = "1p_vs_yourself"
@@ -2369,8 +2371,8 @@ function main_options()
     local function get_items()
     local save_replays_publicly_choices = {"with my name", "anonymously", "not at all"}
 
-    assets_dir_before_options_menu = config.assets_dir or default_assets_dir
-    sounds_dir_before_options_menu = config.sounds_dir or default_sounds_dir
+    assets_dir_before_options_menu = CONFIG_TABLE.assets_dir or default_assets_dir
+    sounds_dir_before_options_menu = CONFIG_TABLE.sounds_dir or default_sounds_dir
     -- make so we can get "anonymously" from save_replays_publicly_choices["anonymously"]
     for k,v in ipairs(save_replays_publicly_choices) do
         save_replays_publicly_choices[v] = v
@@ -2402,19 +2404,19 @@ function main_options()
         --options menu table reference:
         --{[1]"Option Name", [2]current or default value, [3]type, [4]min or bool value or choices_table,
         -- [5]max, [6]sound_source, [7]selectable, [8]next_func, [9]play_while selected}
-        {"Master Volume", config.master_volume or 100, "numeric", 0, 100, sounds.music.characters["lip"].normal_music, 
+        {"Master Volume", CONFIG_TABLE.master_volume or 100, "numeric", 0, 100, sounds.music.characters["lip"].normal_music, 
                 true, nil, true},
-        {"SFX Volume", config.SFX_volume or 100, "numeric", 0, 100, sounds.SFX.cur_move, true},
-        {"Music Volume", config.music_volume or 100, "numeric", 0, 100, sounds.music.characters["lip"].normal_music, 
+        {"SFX Volume", CONFIG_TABLE.SFX_volume or 100, "numeric", 0, 100, sounds.SFX.cur_move, true},
+        {"Music Volume", CONFIG_TABLE.music_volume or 100, "numeric", 0, 100, sounds.music.characters["lip"].normal_music, 
                 true, nil, true},
-        {"Debug Mode", debug_mode_text[config.debug_mode or false], "bool", false, nil, nil,false},
+        {"Debug Mode", debug_mode_text[CONFIG_TABLE.debug_mode or false], "bool", false, nil, nil,false},
         {"Save replays publicly", 
-            save_replays_publicly_choices[config.save_replays_publicly]
+            save_replays_publicly_choices[CONFIG_TABLE.save_replays_publicly]
             or save_replays_publicly_choices["with my name"],
             "multiple choice", save_replays_publicly_choices},
-        {"Graphics set", config.assets_dir or default_assets_dir, "multiple choice", asset_sets},
+        {"Graphics set", CONFIG_TABLE.assets_dir or default_assets_dir, "multiple choice", asset_sets},
         {"About custom graphics", "", "function", nil, nil, nil, nil, show_custom_graphics_readme},
-        {"Sounds set", config.sounds_dir or default_sounds_dir, "multiple choice", sound_sets},
+        {"Sounds set", CONFIG_TABLE.sounds_dir or default_sounds_dir, "multiple choice", sound_sets},
         {"About custom sounds", "", "function", nil, nil, nil, nil, show_custom_sounds_readme},
         {"Back", "", nil, nil, nil, nil, false, main_select_mode}
     }
@@ -2532,28 +2534,28 @@ function main_options()
         if adjust_active_value then
             if menu_options[active_idx][3] == "bool" then
                   if active_idx == 4 then
-                    config.debug_mode = not config.debug_mode
-                    menu_options[active_idx][2] = debug_mode_text[config.debug_mode or false]
+                    CONFIG_TABLE.debug_mode = not CONFIG_TABLE.debug_mode
+                    menu_options[active_idx][2] = debug_mode_text[CONFIG_TABLE.debug_mode or false]
                   end
               --add any other bool config updates here
             elseif menu_options[active_idx][3] == "numeric" then
-                  if config.master_volume ~= menu_options[1][2] then
-                    config.master_volume = menu_options[1][2]
-                    love.audio.setVolume(config.master_volume / 100)
+                  if CONFIG_TABLE.master_volume ~= menu_options[1][2] then
+                    CONFIG_TABLE.master_volume = menu_options[1][2]
+                    love.audio.setVolume(CONFIG_TABLE.master_volume / 100)
                   end
-                if config.SFX_volume ~= menu_options[2][2] then --SFX volume should be updated
-                    config.SFX_volume = menu_options[2][2]
-                    menu_options[2][6]:setVolume(config.SFX_volume / 100) --do just the one sound effect until we deselect
+                if CONFIG_TABLE.SFX_volume ~= menu_options[2][2] then --SFX volume should be updated
+                    CONFIG_TABLE.SFX_volume = menu_options[2][2]
+                    menu_options[2][6]:setVolume(CONFIG_TABLE.SFX_volume / 100) --do just the one sound effect until we deselect
                 end
                 if active_idx == 2 and deselected_this_frame then --SFX Volume
-                    set_volume(sounds.SFX, config.SFX_volume / 100)
+                    set_volume(sounds.SFX, CONFIG_TABLE.SFX_volume / 100)
                 end
-                if config.music_volume ~= menu_options[3][2] then --music volume should be updated
-                    config.music_volume = menu_options[3][2]
-                    menu_options[3][6]:setVolume(config.music_volume / 100) --do just the one music source until we deselect
+                if CONFIG_TABLE.music_volume ~= menu_options[3][2] then --music volume should be updated
+                    CONFIG_TABLE.music_volume = menu_options[3][2]
+                    menu_options[3][6]:setVolume(CONFIG_TABLE.music_volume / 100) --do just the one music source until we deselect
                 end
                   if active_idx == 3 and deselected_this_frame then --Music Volume
-                    set_volume(sounds.music, config.music_volume / 100) 
+                    set_volume(sounds.music, CONFIG_TABLE.music_volume / 100) 
                   end
           --add any other numeric config updates here
             elseif menu_options[active_idx][3] == "multiple choice" then
@@ -2574,11 +2576,11 @@ function main_options()
             end
               
               if active_idx == 5 then
-                config.save_replays_publicly = menu_options[active_idx][2]
+                CONFIG_TABLE.save_replays_publicly = menu_options[active_idx][2]
               elseif active_idx == 6 then
-                config.assets_dir = menu_options[active_idx][2]
+                CONFIG_TABLE.assets_dir = menu_options[active_idx][2]
               elseif active_idx == 8 then
-                config.sounds_dir = menu_options[active_idx][2]
+                CONFIG_TABLE.sounds_dir = menu_options[active_idx][2]
               end
           --add any other multiple choice config updates here
         end
@@ -2651,14 +2653,14 @@ function exit_options_menu()
     gprint("writing config to file...", 300, 280)
     coroutine_wait()
     write_conf_file()
-    if config.assets_dir ~= assets_dir_before_options_menu then
+    if CONFIG_TABLE.assets_dir ~= assets_dir_before_options_menu then
         gprint("reloading graphics...", 300, 305)
         coroutine_wait()
         graphics_init()
     end
 
     assets_dir_before_options_menu = nil
-    if config.sounds_dir ~= sounds_dir_before_options_menu then
+    if CONFIG_TABLE.sounds_dir ~= sounds_dir_before_options_menu then
         gprint("reloading sounds...", 300, 305)
         coroutine_wait()
         sound_init()
@@ -2682,7 +2684,7 @@ function main_set_name()
         end
 
         if this_frame_keys["return"] or this_frame_keys["kenter"] then
-            config.name = name
+            CONFIG_TABLE.name = name
             write_conf_file()
             return main_select_mode
         end
@@ -2777,9 +2779,9 @@ function write_char_sel_settings_to_file()
         if not closing then
             coroutine_wait()
         end
-        config.character = my_state.character
-        config.level = my_state.level
-        config.ranked = my_state.ranked
+        CONFIG_TABLE.character = my_state.character
+        CONFIG_TABLE.level = my_state.level
+        CONFIG_TABLE.ranked = my_state.ranked
         write_conf_file()
     end
 end
