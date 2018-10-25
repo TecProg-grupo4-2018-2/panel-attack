@@ -27,16 +27,16 @@ function load_game_resources()
     local func, arg = main_select_mode, nil
     replay = {}
 
-    gprint("Reading config file", 300, 280)
+    gprint("Reading config file", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     read_conf_file() --  @todo stop making new config files
-    gprint("Reading replay file", 300, 280)
+    gprint("Reading replay file", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     read_replay_file()
-    gprint("Loading graphics...", 300, 280)
+    gprint("Loading graphics...", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     graphics_init() -- loads images and sets up graphical components
-    gprint("Loading sounds... (this takes a few seconds)", 300, 280)
+    gprint("Loading sounds... (this takes a few seconds)", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     sound_init() -- loads sound components 
     
@@ -54,7 +54,8 @@ end
 -- @param func The function to be wrapped
 function run_function_as_60hz(func)
     local frequency = 1 / 60
-    assert(func, "Run fuction as 60hz param nil")
+    assert(func, "function parameter is nil")
+
     for i=1, 4 do
         if leftover_time >= frequency then
             func()
@@ -71,9 +72,9 @@ end
 -- menu, those keys should definitely not move many cursors each.
 -- @param func a function
 -- @return 
-local multi = false
 function multi_func(func)
-    assert(func, "Milti func param nil")
+    local multi = false
+    assert(func, "multi_func is nil")
     return function(...)
         multi = true
         local res = {func(...)}
@@ -108,9 +109,13 @@ end
 function menu_key_func(fixed, configurable, rept)
     assert(fixed, "Menu key func param fixed is nil")
     assert(configurable, "Menu key func param configurable is nil")
-    local query = normal_key
+
+    local query = nil
     if rept then
         query = repeating_key
+    else
+        query = normal_key
+
     end
     
     for i=1, #fixed do
@@ -122,7 +127,7 @@ function menu_key_func(fixed, configurable, rept)
         if multi then
             for i=1,#configurable do
             res = res or query(k[configurable[i]])
-        end
+            end
         else
             for i=1, #fixed do
                 res = res or query(fixed[i])
@@ -287,8 +292,8 @@ do
             to_print = to_print .. "   " .. menu_options[i][1] .. "\n"
             end
             
-            gprint(arrow, 300, 280)
-            gprint(to_print, 300, 280)
+            gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+            gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
             coroutine_wait()
 
             assert(k, "No key was passed")
@@ -351,9 +356,9 @@ function select_speed_and_level_menu(next_func, ...)
     to_print2 = "                  " .. speed .. "\n                  "
         .. difficulties[difficulty]
         
-    gprint(arrow, 300, 280)
-    gprint(to_print, 300, 280)
-    gprint(to_print2, 300, 280)
+    gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+    gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
+    gprint(to_print2, X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
 
     assert(speed ~= 0, "Speed cannot be zero.")
@@ -479,7 +484,7 @@ function main_character_select()
                 end
             end
 
-            gprint("Waiting for room initialization...", 300, 280)
+            gprint("Waiting for room initialization...", X_STRING_CENTER, Y_STRING_CENTER)
             coroutine_wait()
             do_messages()
 
@@ -498,7 +503,7 @@ function main_character_select()
                     end
                 end
 
-                gprint("Lost connection.  Trying to rejoin...", 300, 280)
+                gprint("Lost connection.  Trying to rejoin...", X_STRING_CENTER, Y_STRING_CENTER)
                 coroutine_wait()
                 do_messages()
 
@@ -1056,7 +1061,7 @@ function main_character_select()
             end
 
             for i=1, 30 do
-                gprint(to_print,300, 280)
+                gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
                 do_messages()
                 coroutine_wait()
             end
@@ -1073,7 +1078,7 @@ function main_character_select()
                 print("P2.panel_buffer = " .. P2.panel_buffer)
                 print("P1.gpanel_buffer = " .. P1.gpanel_buffer)
                 print("P2.gpanel_buffer = " .. P2.gpanel_buffer)
-                gprint(to_print, 300, 280)
+                gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
                 do_messages()
                 coroutine_wait()
                 local LIMITTIMEOUT = 500
@@ -1457,8 +1462,8 @@ function main_net_vs_lobby()
         end
         
         gprint(notice[#menu_options > 2], lobby_menu_x[showing_leaderboard], 250)
-        gprint(arrow, lobby_menu_x[showing_leaderboard], 280)
-        gprint(to_print, lobby_menu_x[showing_leaderboard], 280)
+        gprint(arrow, lobby_menu_x[showing_leaderboard], Y_STRING_CENTER)
+        gprint(to_print, lobby_menu_x[showing_leaderboard], Y_STRING_CENTER)
         
         if showing_leaderboard then
             gprint(leaderboard_string, 500, 160)
@@ -1611,13 +1616,13 @@ function main_net_vs_setup(ip)
     P1, P1_level, P2_level, got_opponent = nil, nil, nil, nil
     P2 = {panel_buffer="", gpanel_buffer=""}
 
-    gprint("Setting up connection...", 300, 280)
+    gprint("Setting up connection...", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     network_init(ip)
 
     local timeout_counter = 0
     while not connection_is_ready() do
-        gprint("Connecting...", 300, 280)
+        gprint("Connecting...", X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         do_messages()
     end
@@ -1629,7 +1634,7 @@ function main_net_vs_setup(ip)
     local my_level, to_print, fake_P2 = 5, nil, P2
     local k = keyboard[1]
     while got_opponent == nil do
-        gprint("Waiting for opponent...", 300, 280)
+        gprint("Waiting for opponent...", X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         do_messages()
     end
@@ -1637,7 +1642,7 @@ function main_net_vs_setup(ip)
     while P1_level == nil or P2_level == nil do
         to_print = (P1_level and "L" or"Choose l") .. "evel: "..my_level..
             "\nOpponent's level: "..(P2_level or "???")
-        gprint(to_print, 300, 280)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         do_messages()
         if P1_level then
@@ -1678,14 +1683,14 @@ function main_net_vs_setup(ip)
     end
 
     for i=1, 30 do
-        gprint(to_print,300, 280)
+        gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
         do_messages()
         coroutine_wait()
     end
     
     while P1.panel_buffer == "" or P2.panel_buffer == ""
         or P1.gpanel_buffer == "" or P2.gpanel_buffer == "" do
-        gprint(to_print,300, 280)
+        gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
         do_messages()
         coroutine_wait()
     end
@@ -1846,7 +1851,7 @@ main_local_vs_setup = multi_func(function()
     while chosen[1] == nil or chosen[2] == nil do
         to_print = (chosen[1] and "" or "Choose ") .. "P1 level: "..maybe[1].."\n"
             ..(chosen[2] and "" or "Choose ") .. "P2 level: "..(maybe[2])
-        gprint(to_print, 300, 280)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         
         for i=1, 2 do
@@ -1892,7 +1897,7 @@ main_local_vs_setup = multi_func(function()
     make_local_gpanels(P2, "000000")
     
     for i=1, 30 do
-        gprint(to_print,300, 280)
+        gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
     end
     
@@ -2249,8 +2254,8 @@ do
                 to_print = to_print .. "   " .. menu_options[i][1] .. "\n"
             end
             
-            gprint(arrow, 300, 280)
-            gprint(to_print, 300, 280)
+            gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+            gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
             coroutine_wait()
             
             if menu_key_up(k) then
@@ -2302,9 +2307,9 @@ function main_config_input()
             to_print2 = to_print2 .. "                  " .. menu_options[i][2] .. "\n"
         end
         
-        gprint(arrow, 300, 280)
-        gprint(to_print, 300, 280)
-        gprint(to_print2, 300, 280)
+        gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
+        gprint(to_print2, X_STRING_CENTER, Y_STRING_CENTER)
     end
     
     local function set_key(idx)
@@ -2448,9 +2453,9 @@ function main_options()
             
             to_print2 = to_print2 .. "\n"
           end
-        gprint(arrow, 300, 280)
-        gprint(to_print, 300, 280)
-        gprint(to_print2, 300, 280)
+        gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
+        gprint(to_print2, X_STRING_CENTER, Y_STRING_CENTER)
     end
 
     --- 
@@ -2650,18 +2655,18 @@ end
 -- @tparam nil
 -- @treturn nil
 function exit_options_menu()
-    gprint("writing config to file...", 300, 280)
+    gprint("writing config to file...", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     write_conf_file()
     if CONFIG_TABLE.assets_dir ~= assets_dir_before_options_menu then
-        gprint("reloading graphics...", 300, 305)
+        gprint("reloading graphics...", X_STRING_CENTER, 305)
         coroutine_wait()
         graphics_init()
     end
 
     assets_dir_before_options_menu = nil
     if CONFIG_TABLE.sounds_dir ~= sounds_dir_before_options_menu then
-        gprint("reloading sounds...", 300, 305)
+        gprint("reloading sounds...", X_STRING_CENTER, 305)
         coroutine_wait()
         sound_init()
     end
@@ -2677,7 +2682,7 @@ function main_set_name()
     local name = ""
     while true do
         local to_print = "Enter your name:\n" .. name
-        gprint(to_print, 300, 280)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         if this_frame_keys["escape"] then
             return main_select_mode
@@ -2757,7 +2762,7 @@ function main_dumb_transition(next_func, text, timemin, timemax)
         -- end
         -- @todo anything else we should be listening for during main_dumb_transition?
       -- end
-        gprint(text, 300, 280)
+        gprint(text, X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         if t >= timemin and (t >=timemax or (menu_key_enter(k) or menu_key_escape(k))) then
             return next_func
