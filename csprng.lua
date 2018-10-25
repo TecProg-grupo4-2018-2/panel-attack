@@ -9,16 +9,19 @@
 -- @return num_binary
 local function to_binary(num_integer) 
     local num_binary = {}
-    local copy_num_integer = assert(type(num_integer) == 'number', 'Not is a number')
+    local copy_num_integer = assert(num_integer)
     local GREATER_HEX = 0x7FFFFFFF -- The bigger number in hexadecimal with a signal 
+    local rest = copy_num_integer % 2
+    local div = copy_num_integer / 2
+
     while true do
-        assert(table.insert(num_binary, copy_num_integer % 2), 'Not was possible insert a number')
-        copy_num_integer = bit.band(math.floor(copy_num_integer / 2), GREATER_HEX)
+        table.insert(num_binary, rest)
+        copy_num_integer = bit.band(math.floor(div), GREATER_HEX)
         if copy_num_integer == 0 then
             break
         end
     end
-    return assert(num_binary)
+    return num_binary
 end
 
 --- This function convert an arbitrary-length table of bits to a number decimal
@@ -26,10 +29,10 @@ end
 -- @return num_integer
 local function from_binary(num_binary) 
     local num_integer = 0
-    for i=#assert(type(num_binary) == 'number', 'Not is a number'), 1, -1 do
+    for i=#num_binary, 1, -1 do
         num_integer = num_integer * 2 + num_binary[i]
     end
-    return assert(num_integer)
+    return num_integer
 end
 
 --- ISAAC Internal Variables
@@ -42,24 +45,28 @@ local mersenne_twister = {} -- Mersenne twister table
 local index = 0
 
 --- Other variables and constants for the seeding mechanism
-POSSIBLE_VALUES = 2^32-1 -- Possible values in hexadecimal
 local mt_seeded = false -- Verify if mersenne twister was seeded
 local mt_seed = math.random(1, POSSIBLE_VALUES) 
+
+--- Internal constants
 DIMENCIONAL_EQUIDISTRIBUTION = 623 -- Represent a cube that content 623 dimensions
 BITS_30 = 30 -- Represent 30 bits
 BITS_32 = 32 -- Represent 32 bits
+POSSIBLE_VALUES = 2^32-1 -- Possible values in hexadecimal
 
 --- This function seed the Mersenne Twister RNG.
 -- @param seed
 -- @return nil
 function initialize_mt_generator(seed)
-    index = 0
-    mersenne_twister[0] = assert(seed)
+    local index = 0
+    mersenne_twister[0] = seed
+
     for i=1, DIMENCIONAL_EQUIDISTRIBUTION do
-        local state_succession = ( (1812433253 * bit.bxor(mersenne_twister[i-1], bit.rshift(mersenne_twister[i-1], BITS_30) ) )+i) 
+	local bit_manipulation  = bit.bxor(mersenne_twister[i-1], bit.rshift(mersenne_twister[i-1], BITS_30) )    
+        local state_succession = (1812433253 * bit_manipulation)+i 
         local num_binary = to_binary(state_succession)
         while #num_binary > BITS_32 do
-            assert(table.remove(num_binary, 1), 'Not was possible remove a number')
+            table.remove(num_binary, 1)
         end
         mersenne_twister[i] = from_binary(num_binary)
     end
@@ -76,6 +83,7 @@ local function generate_mt()
     local PARAMETER_L = 0x7FFFFFFF
     local PARAMETER_M = 397 
     local PARAMETER_A = 0x9908B0DF
+    
     -- Walks for every 623 cube numbers	
     for i=0, DIMENCIONAL_EQUIDISTRIBUTION do
         local bits = bit.band(mersenne_twister[i], PARAMETER_U)
@@ -104,17 +112,28 @@ function extract_mt(min, max)
     if index == 0 then
         generate_mt()
     end
+    
     local mt_value = mersenne_twister[index]
     min = assert(min or 0)
     max = assert(max or POSSIBLE_VALUES)
     --print("Accessing: mersenne_twister["..index.."]...")
-    mt_value = bit.bxor(mt_value, bit.rshift(mt_value, SHIFT_U) )
-    mt_value = bit.bxor(mt_value, bit.band(bit.lshift(mt_value, SHIFT_S), SHIFT_B) )
-    mt_value = bit.bxor(mt_value, bit.band(bit.lshift(mt_value, SHIFT_T), SHIFT_C) )
-    mt_value = bit.bxor(mt_value, bit.rshift(mt_value, SHIFT_L) )
+    
+    local right_shift_1 = bit.rshift(mt_value, SHIFT_U)
+    mt_value = bit.bxor(mt_value, right_shift_1)
+    
+    local bitwise_and_1 = bit.band(bit.lshift(mt_value, SHIFT_S))
+    mt_value = bit.bxor(mt_value, bitwise_and, SHIFT_B)
+
+    local bitwise_and_2 = bit.band(bit.lshift(mt_value, SHIFT_T)) 
+    mt_value = bit.bxor(mt_value, bitwise_and_2, SHIFT_C)
+    
+    local right_shift_2 =  bit.rshift(mt_value, SHIFT_L)  
+    mt_value = bit.bxor(mt_value, right_shift_2)
+    
     index = (index+1) % PARAMETER_N
     return assert((mt_value % max)+min)
 end
+
 
 NUM_TERMS = 256 -- Possibles terms
 
@@ -126,12 +145,14 @@ function seed_from_mt(seed)
         mt_seeded = false
         mt_seed = seed
     end
+    
     -- Always seed the first time around. Otherwise, seed approximately once per 100 times.
     if not mt_seeded or (math.random(1, 100) == 50) then 
         initialize_mt_generator(mt_seed)
         mt_seeded = true
         mt_seed = extract_mt()
     end
+    
     for i=1, NUM_TERMS do
         sequence_results[i] = extract_mt()
     end
@@ -149,31 +170,32 @@ local function mix(a,b,c,d,e,f,g,h)
     f = assert(type(f)=='number') % (POSSIBLE_VALUES)
     g = assert(type(g)=='number') % (POSSIBLE_VALUES)
     h = assert(type(h)=='number') % (POSSIBLE_VALUES)
-     a = bit.bxor(a, bit.lshift(b, 11))
-     d = (d + a) % (POSSIBLE_VALUES)
-     b = (b + c) % (POSSIBLE_VALUES)
-     b = bit.bxor(b, bit.rshift(c, 2) )
-     e = (e + b) % (POSSIBLE_VALUES)
-     c = (c + d) % (POSSIBLE_VALUES)
-     c = bit.bxor(c, bit.lshift(d, 8) )
-     f = (f + c) % (POSSIBLE_VALUES)
-     d = (d + e) % (POSSIBLE_VALUES)
-     d = bit.bxor(d, bit.rshift(e, 16) )
-     g = (g + d) % (POSSIBLE_VALUES)
-     e = (e + f) % (POSSIBLE_VALUES)
-     e = bit.bxor(e, bit.lshift(f, 10) )
-     h = (h + e) % (POSSIBLE_VALUES)
-     f = (f + g) % (POSSIBLE_VALUES)
-     f = bit.bxor(f, bit.rshift(g, 4) )
-     a = (a + f) % (POSSIBLE_VALUES)
-     g = (g + h) % (POSSIBLE_VALUES)
-     g = bit.bxor(g, bit.lshift(h, 8) )
-     b = (b + g) % (POSSIBLE_VALUES)
-     h = (h + a) % (POSSIBLE_VALUES)
-     h = bit.bxor(h, bit.rshift(a, 9) )
-     c = (c + h) % (POSSIBLE_VALUES)
-     a = (a + b) % (POSSIBLE_VALUES)
-     return assert(a),assert(b),assert(c),assert(d),assert(e),assert(f),assert(g),assert(h)
+     
+    a = bit.bxor(a, bit.lshift(b, 11))
+    d = (d + a) % (POSSIBLE_VALUES)
+    b = (b + c) % (POSSIBLE_VALUES)
+    b = bit.bxor(b, bit.rshift(c, 2) )
+    e = (e + b) % (POSSIBLE_VALUES)
+    c = (c + d) % (POSSIBLE_VALUES)
+    c = bit.bxor(c, bit.lshift(d, 8) )
+    f = (f + c) % (POSSIBLE_VALUES)
+    d = (d + e) % (POSSIBLE_VALUES)
+    d = bit.bxor(d, bit.rshift(e, 16) )
+    g = (g + d) % (POSSIBLE_VALUES)
+    e = (e + f) % (POSSIBLE_VALUES)
+    e = bit.bxor(e, bit.lshift(f, 10) )
+    h = (h + e) % (POSSIBLE_VALUES)
+    f = (f + g) % (POSSIBLE_VALUES)
+    f = bit.bxor(f, bit.rshift(g, 4) )
+    a = (a + f) % (POSSIBLE_VALUES)
+    g = (g + h) % (POSSIBLE_VALUES)
+    g = bit.bxor(g, bit.lshift(h, 8) )
+    b = (b + g) % (POSSIBLE_VALUES)
+    h = (h + a) % (POSSIBLE_VALUES)
+    h = bit.bxor(h, bit.rshift(a, 9) )
+    c = (c + h) % (POSSIBLE_VALUES)
+    a = (a + b) % (POSSIBLE_VALUES)
+    return assert(a),assert(b),assert(c),assert(d),assert(e),assert(f),assert(g),assert(h)
 end
 
 --- This function run ISAAC algorithm
@@ -181,6 +203,7 @@ end
 -- @return nil
 local function isaac()
     local copy_memory, memory_result = 0, 0
+    
     for i=1, NUM_TERMS do
         copy_memory = memory[i]
         if (i % 4) == 0 then
@@ -192,10 +215,16 @@ local function isaac()
         elseif (i % 4) == 3 then
             accumulator = bit.bxor(accumulator, bit.rshift(accumulator, 16))
         end
-        accumulator = (memory[ ((i+128) % NUM_TERMS)+1 ] + accumulator) % (POSSIBLE_VALUES)
-        memory_result = (memory[ (bit.rshift(copy_memory, 2) % NUM_TERMS)+1 ] + accumulator + previous_result) % (POSSIBLE_VALUES)
+	
+	local index_accumulator = ((i+128) % NUM_TERMS)+1 
+        accumulator = (memory[index_accumulator] + accumulator) % (POSSIBLE_VALUES)
+
+	local index_memory_result = (bit.rshift(copy_memory, 2) % NUM_TERMS)+1 
+        memory_result = (memory[index_memory_result] + accumulator + previous_result) % (POSSIBLE_VALUES)
         memory[i] = memory_result
-        previous_result = (memory[ (bit.rshift(memory_result,10) % NUM_TERMS)+1 ] + copy_memory) % (POSSIBLE_VALUES)
+        
+	local index_previous_result = (bit.rshift(memory_result,10) % NUM_TERMS)+1 
+	previous_result = (memory[index_previous_result] + copy_memory) % (POSSIBLE_VALUES)
         sequence_results[i] = previous_result
     end
 end
@@ -211,6 +240,7 @@ local function randinit(flag)
     for i=1,4 do
         a,b,c,d,e,f,g,h = mix(a,b,c,d,e,f,g,h)
     end
+    
     -- Load random numbers into eight elements of the table(array in others lenguages) memory
     for i=1, NUM_TERMS, 8 do
         if assert(flag) then
@@ -233,6 +263,7 @@ local function randinit(flag)
         memory[i+6] = g
         memory[i+7] = h
     end
+    
     -- Load random numbers into eight elements of the table(array in others lenguages) memory. 
     -- ... if "flag" is true
     if flag then
@@ -256,6 +287,7 @@ local function randinit(flag)
             memory[i+7] = h
         end
     end
+    
     isaac()
     randcnt = NUM_TERMS
 end
@@ -266,6 +298,7 @@ end
 function generate_isaac(entropy)
     accumulator = 0
     previous_result = 0
+    
     -- Verify the length of entropy
     if assert(entropy) and #entropy >= NUM_TERMS then
         for i=1, NUM_TERMS do
@@ -278,6 +311,7 @@ function generate_isaac(entropy)
     for i=1, NUM_TERMS do
         memory[i] = 0
     end
+
     randinit(true)
     isaac() 
     isaac() -- run isaac twice 
@@ -301,11 +335,11 @@ end
 -- @param max
 -- @return (get_random() % max) + min
 function cs_random(min, max)
-    if not assert(max) then
+    if not max then
         max = POSSIBLE_VALUES
     end
-    if not assert(min) then
+    if not min then
         min = 0
     end
-    return assert((get_random() % max) + min)
+    return (get_random() % max) + min
 end
