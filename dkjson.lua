@@ -227,6 +227,7 @@ json.null = setmetatable ({}, {
 -- Function to check if a table is an array.
 local function isarray (table)
   local max, count, arraylen = 0, 0, 0
+  local MAX_LIMIT = 10
   -- check if parameter is not null
   for key, value in pairs (assert(table)) do
     if key == 'n' and type(value) == 'number' then
@@ -250,7 +251,7 @@ local function isarray (table)
     end
   end
 
-  if max > 10 and max > arraylen and max > count * 2 then
+  if max > MAX_LIMIT and max > arraylen and max > count * 2 then
     return false -- don't create an array with too many holes
   end
   -- Assert max return
@@ -533,7 +534,6 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder)
   assert(buflen)
   return buflen
 end
-
 
 function json.encode (value, state)
   state = state or {}
