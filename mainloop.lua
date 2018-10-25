@@ -83,116 +83,6 @@ function multi_func(func)
     end
 end
 
--- Keys that have a fixed function in menus can be bound to other
--- meanings, but should continue working the same way in menus.
-local menu_reserved_keys = {}
-
-
-function repeating_key(key)
-    local key_time = keys[key]
-    return this_frame_keys[key] or
-        (key_time and key_time > 25 and key_time % 3 ~= 0)
-end
-
---- Return a key in current the frame
--- @param key 
--- @return 
-function normal_key(key)
-    return this_frame_keys[key]
-end
-
---- Sets up a button in the keyboard regarding its fixed and configurable behaviour
--- @param fixed table with the desired behaviour
--- @param configurable table which the desired behaviour
--- @param rept boolean tells if a button repeats(like pressing and holding)
--- @return a fuction with 1 param 
-function menu_key_func(fixed, configurable, rept)
-    assert(fixed, "Menu key func param fixed is nil")
-    assert(configurable, "Menu key func param configurable is nil")
-
-    local query = nil
-    if rept then
-        query = repeating_key
-    else
-        query = normal_key
-
-    end
-    
-    for i=1, #fixed do
-        menu_reserved_keys[#menu_reserved_keys + 1] = fixed[i]
-    end
-    
-    return function(k)
-        local res = false
-        if multi then
-            for i=1,#configurable do
-            res = res or query(k[configurable[i]])
-            end
-        else
-            for i=1, #fixed do
-                res = res or query(fixed[i])
-            end
-            for i=1, #configurable do
-                local keyname = k[configurable[i]]
-                res = res or query(keyname) and
-                not menu_reserved_keys[keyname]
-            end
-        end
-        return res
-    end
-end
-
-
---- Up arrow key
-menu_key_up = menu_key_func(
-      {"up"},
-      {"up"},
-      true
-    )
-
---- Down arrow key
-menu_key_down = menu_key_func(
-      {"down"},
-      {"down"},
-      true
-    )
-
---- Left arrow key
-menu_key_left = menu_key_func(
-      {"left"},
-      {"left"},
-      true
-    )
-
---- Right arrow key
-menu_key_right = menu_key_func(
-      {"right"},
-      {"right"},
-      true
-    )
-
---- Enter key
-menu_key_enter = menu_key_func(
-      {
-        "return",
-        "kenter",
-        "z"
-      },
-      {"swap1"},
-      false
-    )
-
---- Esc key
-menu_key_escape = menu_key_func(
-      {
-        "escape",
-        "x"
-      },
-      {"swap2"},
-      false
-    )
-
-
 -- Loop containing the main menu's behaviour
 do
     local active_idx = 1
@@ -297,13 +187,13 @@ do
             coroutine_wait()
 
             assert(k, "No key was passed")
-            if menu_key_up(k) then
+            if MENU_KEY_UP(k) then
                 active_idx = wrap(1, active_idx - 1, #menu_options)
-            elseif menu_key_down(k) then
+            elseif MENU_KEY_DOWN(k) then
                 active_idx = wrap(1, active_idx + 1, #menu_options)
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 return menu_options[active_idx][2], menu_options[active_idx][3]
-            elseif menu_key_escape(k) then
+            elseif MENU_KEY_ESCAPE(k) then
                 if active_idx == #menu_options then
                     return menu_options[active_idx][2], menu_options[active_idx][3]
                 else
@@ -364,17 +254,17 @@ function select_speed_and_level_menu(next_func, ...)
     assert(speed ~= 0, "Speed cannot be zero.")
     assert(difficulty ~= 0, "Difficulty cannot be zero.")
 
-    if menu_key_up(k) then
+    if MENU_KEY_UP(k) then
         active_idx = wrap(1, active_idx - 1, #menu_options)
-    elseif menu_key_down(k) then
+    elseif MENU_KEY_DOWN(k) then
         active_idx = wrap(1, active_idx + 1, #menu_options)
-    elseif menu_key_right(k) then
+    elseif MENU_KEY_RIGHT(k) then
         if active_idx == 1 then speed = bound(1, speed + 1, 99)
         elseif active_idx == 2 then difficulty = bound(1, difficulty + 1, 3) end
-    elseif menu_key_left(k) then
+    elseif MENU_KEY_LEFT(k) then
         if active_idx == 1 then speed = bound(1,speed-1,99)
         elseif active_idx == 2 then difficulty = bound(1, difficulty - 1, 3) end
-    elseif menu_key_enter(k) then
+    elseif MENU_KEY_ENTER(k) then
         if active_idx == 3 then
             return menu_options[active_idx][2], {speed, difficulty, ...}
         elseif active_idx == 4 then
@@ -382,7 +272,7 @@ function select_speed_and_level_menu(next_func, ...)
         else
             active_idx = wrap(1, active_idx + 1, #menu_options)
         end
-    elseif menu_key_escape(k) then
+    elseif MENU_KEY_ESCAPE(k) then
         if active_idx == #menu_options then
             return menu_options[active_idx][2], menu_options[active_idx][3]
         else
@@ -1203,22 +1093,22 @@ function main_character_select()
 
         coroutine_wait()
         if not currently_spectating then
-            if menu_key_up(k) then
+            if MENU_KEY_UP(k) then
                 if not selected then move_cursor(up) end
-                elseif menu_key_down(k) then
+                elseif MENU_KEY_DOWN(k) then
                     if not selected then move_cursor(down) end
-                    elseif menu_key_left(k) then
+                    elseif MENU_KEY_LEFT(k) then
                         if selected and active_str == "level" then
                             CONFIG_TABLE.level = bound(1, CONFIG_TABLE.level - 1, 10)
                         end
                     if not selected then move_cursor(left) end
-                    elseif menu_key_right(k) then
+                    elseif MENU_KEY_RIGHT(k) then
                         if selected and active_str == "level" then
                             CONFIG_TABLE.level = bound(1, CONFIG_TABLE.level + 1, 10)
                 end
             -- handles keys input
             if not selected then move_cursor(right) end
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 if selectable[active_str] then
                     selected = not selected
                 elseif active_str == "leave" then
@@ -1238,7 +1128,7 @@ function main_character_select()
                 cursor = shallowcpy(name_to_xy["ready"])
             end
 
-            elseif menu_key_escape(k) then
+            elseif MENU_KEY_ESCAPE(k) then
                 if active_str == "leave" then
                     if character_select_mode == "2p_net_vs" then
                         do_leave()
@@ -1261,7 +1151,7 @@ function main_character_select()
             
             prev_state = my_state
         else -- (we are are spectating)
-            if menu_key_escape(k) then
+            if MENU_KEY_ESCAPE(k) then
                 do_leave()
                 return main_net_vs_lobby
             end
@@ -1470,7 +1360,7 @@ function main_net_vs_lobby()
         end
       
         coroutine_wait()
-        if menu_key_up(k) then
+        if MENU_KEY_UP(k) then
             if showing_leaderboard then
                 if leaderboard_first_idx_to_show>1 then
                     leaderboard_first_idx_to_show = leaderboard_first_idx_to_show - 1
@@ -1481,7 +1371,7 @@ function main_net_vs_lobby()
             else
                 active_idx = wrap(1, active_idx-1, #menu_options)
             end
-        elseif menu_key_down(k) then
+        elseif MENU_KEY_DOWN(k) then
             if showing_leaderboard then
                 if leaderboard_last_idx_to_show < #leaderboard_report then
                     leaderboard_first_idx_to_show = leaderboard_first_idx_to_show + 1
@@ -1492,7 +1382,7 @@ function main_net_vs_lobby()
             else
                 active_idx = wrap(1, active_idx+1, #menu_options)
             end
-        elseif menu_key_enter(k) then
+        elseif MENU_KEY_ENTER(k) then
             spectator_list = {}
             spectators_string = ""
             if active_idx == #menu_options then
@@ -1516,7 +1406,7 @@ function main_net_vs_lobby()
             room_number_last_spectated = menu_options[active_idx].roomNumber
             request_spectate(menu_options[active_idx].roomNumber)
         end
-        elseif menu_key_escape(k) then
+        elseif MENU_KEY_ESCAPE(k) then
             if active_idx == #menu_options then
                 return main_select_mode
             elseif showing_leaderboard then
@@ -1646,12 +1536,12 @@ function main_net_vs_setup(ip)
         coroutine_wait()
         do_messages()
         if P1_level then
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 P1_level = my_level
                 net_send("L"..(({[10]=0})[my_level] or my_level))
-            elseif menu_key_up(k) or menu_key_right(k) then
+            elseif MENU_KEY_UP(k) or MENU_KEY_RIGHT(k) then
                 my_level = bound(1,my_level+1,10)
-            elseif menu_key_down(k) or menu_key_left(k) then
+            elseif MENU_KEY_DOWN(k) or MENU_KEY_LEFT(k) then
                 my_level = bound(1,my_level-1,10)
             end
         end
@@ -1857,19 +1747,19 @@ main_local_vs_setup = multi_func(function()
         for i=1, 2 do
             local k=keyboard[i]
             
-            if menu_key_escape(k) then
+            if MENU_KEY_ESCAPE(k) then
                 if chosen[i] then
                     chosen[i] = nil
                 else
                     return main_select_mode
             end
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 chosen[i] = maybe[i]
-            elseif menu_key_up(k) or menu_key_right(k) then
+            elseif MENU_KEY_UP(k) or MENU_KEY_RIGHT(k) then
                 if not chosen[i] then
                     maybe[i] = bound(1, maybe[i] + 1, 10)
                 end
-            elseif menu_key_down(k) or menu_key_left(k) then
+            elseif MENU_KEY_DOWN(k) or MENU_KEY_LEFT(k) then
                 if not chosen[i] then
                     maybe[i] = bound(1, maybe[i] - 1, 10)
                 end
@@ -2258,13 +2148,13 @@ do
             gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
             coroutine_wait()
             
-            if menu_key_up(k) then
+            if MENU_KEY_UP(k) then
                 active_idx = wrap(1, active_idx-1, #menu_options)
-            elseif menu_key_down(k) then
+            elseif MENU_KEY_DOWN(k) then
                 active_idx = wrap(1, active_idx+1, #menu_options)
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 return menu_options[active_idx][2], menu_options[active_idx][3]
-            elseif menu_key_escape(k) then
+            elseif MENU_KEY_ESCAPE(k) then
                 if active_idx == #menu_options then
                     return menu_options[active_idx][2], menu_options[active_idx][3]
                 else
@@ -2334,17 +2224,17 @@ function main_config_input()
         get_items()
         print_stuff()
         coroutine_wait()
-          if menu_key_up(keyboard[1]) then
+          if MENU_KEY_UP(keyboard[1]) then
             active_idx = wrap(1, active_idx - 1, #menu_options)
-          elseif menu_key_down(keyboard[1]) then
+          elseif MENU_KEY_DOWN(keyboard[1]) then
             active_idx = wrap(1, active_idx + 1, #menu_options)
-          elseif menu_key_left(keyboard[1]) then
+          elseif MENU_KEY_LEFT(keyboard[1]) then
             active_player = wrap(1, active_player - 1, 2)
             k=keyboard[active_player]
-          elseif menu_key_right(keyboard[1]) then
+          elseif MENU_KEY_RIGHT(keyboard[1]) then
             active_player = wrap(1, active_player + 1, 2)
             k=keyboard[active_player]
-          elseif menu_key_enter(keyboard[1]) then
+          elseif MENU_KEY_ENTER(keyboard[1]) then
             if active_idx <= #key_names then
                   set_key(active_idx)
                   write_key_file()
@@ -2356,7 +2246,7 @@ function main_config_input()
             else
                   return menu_options[active_idx][3], menu_options[active_idx][4]
             end
-          elseif menu_key_escape(keyboard[1]) then
+          elseif MENU_KEY_ESCAPE(keyboard[1]) then
             if active_idx == #menu_options then
                   return menu_options[active_idx][3], menu_options[active_idx][4]
             else
@@ -2503,15 +2393,15 @@ function main_options()
         --get_items()
         print_stuff()
         coroutine_wait()
-        if menu_key_up(keyboard[1]) and not selected then
+        if MENU_KEY_UP(keyboard[1]) and not selected then
             active_idx = wrap(1, active_idx-1, #menu_options)
-          elseif menu_key_down(keyboard[1]) and not selected then
+          elseif MENU_KEY_DOWN(keyboard[1]) and not selected then
             active_idx = wrap(1, active_idx+1, #menu_options)
-          elseif menu_key_left(keyboard[1]) and (selected or not menu_options[active_idx][7]) then --or not selectable
+          elseif MENU_KEY_LEFT(keyboard[1]) and (selected or not menu_options[active_idx][7]) then --or not selectable
             adjust_left()
-          elseif menu_key_right(keyboard[1]) and (selected or not menu_options[active_idx][7]) then --or not selectable
+          elseif MENU_KEY_RIGHT(keyboard[1]) and (selected or not menu_options[active_idx][7]) then --or not selectable
             adjust_right()
-          elseif menu_key_enter(keyboard[1]) then
+          elseif MENU_KEY_ENTER(keyboard[1]) then
             if menu_options[active_idx][7] then --is selectable
                   selected = not selected
               if not selected then
@@ -2525,7 +2415,7 @@ function main_options()
         elseif active_idx == #menu_options then
               return exit_options_menu
         end
-          elseif menu_key_escape(keyboard[1]) then
+          elseif MENU_KEY_ESCAPE(keyboard[1]) then
             if selected then
                   selected = not selected
                   deselected_this_frame = true
@@ -2607,7 +2497,7 @@ function main_options()
                 do_menu_function = false
                 coroutine_wait()
 
-                if menu_key_escape(keyboard[1]) or menu_key_enter(keyboard[1]) then
+                if MENU_KEY_ESCAPE(keyboard[1]) or MENU_KEY_ENTER(keyboard[1]) then
                       break;
                 end
               end
@@ -2627,7 +2517,7 @@ function main_options()
                 gprint(custom_sounds_readme, 30, 150)      
                 do_menu_function = false
                 coroutine_wait()
-                if menu_key_escape(keyboard[1]) or menu_key_enter(keyboard[1]) then
+                if MENU_KEY_ESCAPE(keyboard[1]) or MENU_KEY_ENTER(keyboard[1]) then
                     break;
                 end
               end
@@ -2764,7 +2654,7 @@ function main_dumb_transition(next_func, text, timemin, timemax)
       -- end
         gprint(text, X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
-        if t >= timemin and (t >=timemax or (menu_key_enter(k) or menu_key_escape(k))) then
+        if t >= timemin and (t >=timemax or (MENU_KEY_ENTER(k) or MENU_KEY_ESCAPE(k))) then
             return next_func
         end
         
