@@ -4,24 +4,25 @@
 -- @module graphics 
 
 require("input")
-local ceil = math.ceil --rounding
-local len_garbage = #garbage_bounce_table --length of lua garbage
+local ceil = math.ceil --rounding -- T24
+local len_garbage = #garbage_bounce_table --length of lua garbage -- T24
 
 --- upload image file and returns drawn image
 -- @function load_img
 -- @param image_path image archive
 -- @return draw_image drawing image
+
 function load_img(image_path)
-    local img
+    local img -- T24
     assert(image_path)  
     
     -- if the path doesn't exist, creates the path 
-    if pcall(
-        function ()
-            img = love.image.newImageData("assets/"..(config.assets_dir or
-                                            default_assets_dir).."/"..image_path)
-        end) then
+    function creates_image()
+        img = love.image.newImageData("assets/"..(config.assets_dir or
+                                        default_assets_dir).."/"..image_path)
+    end
 
+    if pcall(creates_image) then
         if config.assets_dir and config.assets_dir ~= default_assets_dir then
             print("loaded custom asset: "..config.assets_dir.."/"..image_path)
         end
@@ -53,8 +54,8 @@ function draw(img, x, y, rot, x_scale, y_scale)
     rot = rot or 0
     x_scale = x_scale or 1
     y_scale = y_scale or 1
-    gfx_q:push(
-    {love.graphics.draw,
+
+    gfx_q:push({love.graphics.draw,
     {
         img,
         x*GFX_SCALE,
@@ -63,7 +64,7 @@ function draw(img, x, y, rot, x_scale, y_scale)
         x_scale*GFX_SCALE,
         y_scale*GFX_SCALE
     }
-})
+    })
 end
 
 --- draws the menu
@@ -86,8 +87,8 @@ function menu_draw(img, x, y, rot, x_scale,y_scale)
     rot = rot or 0
     x_scale = x_scale or 1
     y_scale = y_scale or 1
-    gfx_q:push(
-    {love.graphics.draw,
+
+    gfx_q:push({love.graphics.draw,
     {
         img,
         x,
@@ -96,7 +97,7 @@ function menu_draw(img, x, y, rot, x_scale,y_scale)
         x_scale,
         y_scale
     }
-})
+    })
 
 end
 
@@ -123,8 +124,7 @@ function menu_drawq(img, quad, x, y, rot, x_scale, y_scale)
     x_scale = x_scale or 1
     y_scale = y_scale or 1
 
-    gfx_q:push(
-    {love.graphics.draw,
+    gfx_q:push({love.graphics.draw,
     {
         img,
         quad,
@@ -134,7 +134,7 @@ function menu_drawq(img, quad, x, y, rot, x_scale, y_scale)
         x_scale,
         y_scale
     }
-})
+    })
 
 end
 
@@ -153,8 +153,7 @@ function grectangle(mode, x, y, width_rectangle, height_rectangle)
     assert(width_rectangle > 0, "x_scale can't be negative") 
     assert(height_rectangle > 0, "y_scale can't be negative")
 
-    gfx_q:push(
-    {love.graphics.rectangle,
+    gfx_q:push({love.graphics.rectangle,
     {
         mode,
         x,
@@ -162,7 +161,7 @@ function grectangle(mode, x, y, width_rectangle, height_rectangle)
         width_rectangle,
         height_rectangle
     }
-})
+    })
 end
 
 --- print message on screen  
@@ -173,14 +172,14 @@ end
 -- @return nil 
 function gprint(str, x, y)
     assert(str) 
-    gfx_q:push(
-    {love.graphics.print,
+
+    gfx_q:push({love.graphics.print,
     {
         str,
         x,
         y
     }
-})
+    })
 end
 
 -- current state of red, green, blue and alpha
@@ -205,8 +204,7 @@ function set_color(r, g, b, a)
     a = a or MAX_ALPHA
 
     -- only do it if this color isn't the same as the previous one
-    if r_current ~= r or g_current ~= g or b_current ~= b or 
-        a_current ~= a then
+    if r_current ~= r or g_current ~= g or b_current ~= b or a_current ~= a then
         r_current, g_current, b_current, a_current = r, g, b, a
         gfx_q:push({love.graphics.setColor, {r, g, b, a}})
     end
@@ -335,12 +333,14 @@ function graphics_init()
                                                "/"..original_name.."/name.txt")
         open_success, err = name_txt_file:open("r")
         local display_name = name_txt_file:read(name_txt_file:getSize())
+
         if display_name then
             character_display_names[original_name] = display_name
         else
             character_display_names[original_name] = original_name
         end
     end
+
     print("character_display_names: ")
 
     for k,v in pairs(character_display_names) do
@@ -363,13 +363,11 @@ function Stack.update_cards(self)
     -- scrolls through all the cards and updates
     for i = self.card_q.first,self.card_q.last do
         local card = self.card_q[i]
+        card.frame = card.frame + 1
         if card_animation[card.frame] then
-            card.frame = card.frame + 1
             if(card_animation[card.frame]==nil) then
                 self.card_q:pop()
             end
-        else
-            card.frame = card.frame + 1
         end
     end
 end
@@ -380,12 +378,12 @@ end
 -- @return nil 
 function Stack.draw_cards(self)
     assert(self)
-    for i=self.card_q.first,self.card_q.last do
+    for i = self.card_q.first,self.card_q.last do
         local card = self.card_q[i]
         if card_animation[card.frame] then
             local draw_x = (card.x-1) * 16 + self.pos_x
             local draw_y = (11-card.y) * 16 + self.pos_y + self.displacement
-            - card_animation[card.frame]
+                            - card_animation[card.frame]
             draw(IMG_cards[card.chain][card.n], draw_x, draw_y)
         end
     end
@@ -401,7 +399,7 @@ function Stack.render(self)
     local mouse_x, mouse_y -- coordinates of mouse
 
     if config.debug_mode then
-        mouse_x,mouse_y = love.mouse.getPosition()
+        mouse_x, mouse_y = love.mouse.getPosition()
         mouse_x = mouse_y / GFX_SCALE
         mouse_y = mouse_y / GFX_SCALE
     end
@@ -423,8 +421,8 @@ function Stack.render(self)
             local draw_y = (11-(row)) * 16 + self.pos_y + self.displacement - shake
 
             if panel.color ~= 0 and panel.state ~= "popped" then
-
                 local draw_frame = 1
+
                 if panel.garbage then
                     local imgs = {flash=IMG_metal_flash}
                     if not panel.metal then
@@ -437,7 +435,7 @@ function Stack.render(self)
                             draw(IMG_metal_l, draw_x, draw_y)
                             draw(IMG_metal_r, draw_x+16*(panel.width-1)+8,draw_y)
 
-                            for i=1,2*(panel.width-1) do
+                            for i = 1, 2*(panel.width-1) do
                                 draw(IMG_metal, draw_x+8*i, draw_y)
                             end
                         else
@@ -447,15 +445,15 @@ function Stack.render(self)
                             -- verifies that the resulting height is odd, 
                             local odd = ((height-(height%2))/2)%2==0
 
-                            for i=0,height-1 do
-                                for j=1,width-1 do
+                            for i = 0, height-1 do
+                                for j = 1, width-1 do
                                     draw((odd or height<3) and imgs.filler1 or 
                                            imgs.filler2, draw_x+16*j-8, top_y+16*i) 
                                     odd = not odd
                                 end
                             end
 
-                            if height%2==1 then
+                            if height%2 == 1 then
                                 draw(imgs.face, draw_x+8*(width-1), 
                                         top_y+16*((height-1)/2))
                             else
@@ -684,7 +682,11 @@ end
 -- @param self object 
 -- @return nil 
 function Stack.render_cursor(self)
-    draw(IMG_cursor[(floor(self.CLOCK/16)%2)+1], (self.cur_col-1)*16+self.pos_x-4,
-            (11-(self.cur_row))*16+self.pos_y-4+self.displacement)
+    local x = self.pos_x - 4
+    local y = self.pos_y - 4
+    local col = (self.cur_col - 1) * 16
+    local row = (11 - self.cur_row) * 16
+    draw(IMG_cursor[(floor(self.CLOCK/16)%2)+1], col+x,
+            row+y+self.displacement)
 end
 
