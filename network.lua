@@ -46,15 +46,16 @@ end
 -- @return nil
 function get_message()
 
+    local kind, gap, length, byte
+
     function _verify_leftovers()
         if string.len(leftovers) == 0 then
-            return nil
+          kind = nil
+          devolution = nil
         else
             -- nothing to do
         end
     end
-
-    local kind, gap, length, byte
 
     -- @todo understand all of this lenght parse
     local type_to_length = {G=1,H=1, N=1, E=4, P=121, O=121,
@@ -78,21 +79,24 @@ function get_message()
 
             gap = 3
         else
-            return nil
+          kind = nil
+          devolution = nil
         end
     else
         length = type_to_length[kind] - 1
     end
+
     -- Verify string length leftovers
     if length + gap + 1 > string.len(leftovers) then
-        return nil
+        kind = nil
+        devolution = nil
+    else
+
+        local devolution = string.sub(leftovers,2+gap,length+gap+1)
+        leftovers = string.sub(leftovers,length+gap+2)
+
+        return kind, devolution
     end
-
-    local devolution = string.sub(leftovers,2+gap,length+gap+1)
-
-    leftovers = string.sub(leftovers,length+gap+2)
-
-    return kind, devolution
 end
 
 --- queue of data in connection
@@ -117,6 +121,8 @@ function send_net(...)
             local head_queue = lag_queue:pop()
             local unpack_head = unpack(head_queue)
             TCP_sock:send(unpack_head)
+        else
+            -- nothing to do
         end
     end
 end
@@ -192,17 +198,20 @@ local process_message = {
     J = function(s)
             local current_message = json.decode(s)
             this_frame_messages[#this_frame_messages+1] = current_message
+
             print('JSON LOL '..s)
+
             -- current_message should be false, if not have error
             if not current_message then
                 error('Error in network.lua process_message\nMessage: \''..
                 (s or 'nil')..'\'\ncould not be decoded')
-            end
-            -- Verify if exist spectators
-            if current_message.spectators then
+            elseif current_message.spectators then
+                -- Verify if exist spectators
                 spectator_list = current_message.spectators
                 spectators_string = spectator_list_string(
                     current_message.spectators)
+            else
+                -- nothing to do
             end
         end
     }
@@ -225,25 +234,27 @@ function network_init(ip)
 
     end
 
+    local DEFAULT_TIMEOUT = 7
+
     TCP_sock = socket.tcp()
-    TCP_sock:settimeout(7)
+    TCP_sock:settimeout(DEFAULT_TIMEOUT)
     -- Verify TCP connection
 
     local SOCKET_PORT = 49569
 
     if not TCP_sock:connect(ip, SOCKET_PORT) then
         error('Failed to setup the socket')
+    else
+        -- this timeout is duplicated
+        TCP_sock:settimeout(0)
+        got_H = false
+        send_net('H'..VERSION)
+
+        _verify_json()
+
+        send_json({name=config.name, level=config.level, character=config.character,
+                  save_replays_publicly = config.save_replays_publicly})
     end
-
-    -- this timeout is duplicated
-    TCP_sock:settimeout(0)
-    got_H = false
-    send_net('H'..VERSION)
-
-    _verify_json()
-
-    send_json({name=config.name, level=config.level, character=config.character,
-              save_replays_publicly = config.save_replays_publicly})
 
 end
 
