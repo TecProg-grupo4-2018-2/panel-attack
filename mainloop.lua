@@ -62,6 +62,8 @@ function run_function_as_60hz(func)
             key_counts() -- increments the number of times a key was pressed
             this_frame_keys = {}
             leftover_time = leftover_time - frequency
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -199,6 +201,8 @@ do
                 else
                     active_idx = #menu_options
                 end
+            else
+                -- Nothing to do.
             end
         end
     end
@@ -263,12 +267,16 @@ function select_speed_and_level_menu(next_func, ...)
             speed = bound(1, speed + 1, 99)
         elseif active_idx == 2 then
             difficulty = bound(1, difficulty + 1, 3)
+        else
+            -- Nothing to do.
         end
     elseif MENU_KEY_LEFT(k) then
         if active_idx == 1 then
             speed = bound(1,speed-1,99)
         elseif active_idx == 2 then
             difficulty = bound(1, difficulty - 1, 3)
+        else
+            -- Nothing to do.
         end
     elseif MENU_KEY_ENTER(k) then
         if active_idx == 3 then
@@ -284,6 +292,8 @@ function select_speed_and_level_menu(next_func, ...)
         else
             active_idx = #menu_options
         end
+    else
+        -- Nothing to do.
     end
     end
 end
@@ -315,6 +325,8 @@ function main_endless(...)
         --  @todo proper game over.
             write_replay_file()
             return main_dumb_transition, {main_select_mode, "You scored " .. P1.score}
+        else
+            -- Nothing to do.
         end
 
         run_function_as_60hz(function() P1:local_run() end)
@@ -342,12 +354,19 @@ function main_time_attack(...)
         if P1.game_over or P1.CLOCK == CLOCK_CONSTANT then
             -- @todo proper game over.
             return main_dumb_transition, {main_select_mode, "You scored " .. P1.score}
+        else
+            -- Nothing to do.
         end
         
         run_function_as_60hz(function()
 
-        if (not P1.game_over) and P1.CLOCK < CLOCK_CONSTANT then
-            P1:local_run() end end)
+            if (not P1.game_over) and P1.CLOCK < CLOCK_CONSTANT then
+                P1:local_run()
+            else
+                -- Nothing to do.
+            end 
+        end)
+        
     end
 end
 
@@ -376,7 +395,9 @@ function main_character_select()
         while not global_initialize_room_msg and retries < retry_limit do
             for _, message in ipairs(this_frame_messages) do
                 if message.create_room or message.character_select or message.spectate_request_granted then
-                global_initialize_room_msg = message
+                    global_initialize_room_msg = message
+                else
+                    -- Nothing to do.
                 end
             end
 
@@ -404,12 +425,17 @@ function main_character_select()
                 do_messages()
 
                 retries = retries + 1
+                    
             end
+        else
+            -- Nothing to do.
         end
 
         -- runs if connection has failed
         if not global_initialize_room_msg then
             return main_dumb_transition, {main_select_mode, "Failed to connect.\n\nReturning to main menu", 60, 300}
+        else
+            -- Nothing to do.
         end
 
         message = global_initialize_room_msg
@@ -450,9 +476,13 @@ function main_character_select()
 
         if message.win_counts then
             update_win_counts(message.win_counts)
+        else
+            -- Nothing to do.
         end
         if message.replay_of_match_so_far then
             replay_of_match_so_far = message.replay_of_match_so_far
+        else
+            -- Nothing to do.
         end
 
         if message.ranked then
@@ -465,6 +495,8 @@ function main_character_select()
         if currently_spectating then
             P1 = {panel_buffer="", gpanel_buffer=""}
             print("we reset P1 buffers at start of main_character_select()")
+        else
+            -- Nothing to do.
         end
         P2 = {
             panel_buffer="",
@@ -485,7 +517,7 @@ function main_character_select()
     if character_select_mode == "1p_vs_yourself" then
         map = MAP_1P_VS_YOURSELF
     else
-        -- Nothing to do
+        -- Nothing to do.
     end
 
     local op_state = global_op_state or {character="lip", level=5, cursor="level", ready=false}
@@ -519,13 +551,19 @@ function main_character_select()
             /rating_spread_modifier
 
         op_expected_win_ratio = 100 * round(1/1 + 10^op_expected_win_ratio, 2)
+    else
+        -- Nothing to do.
     end
 
     if character_select_mode == "2p_net_vs" then
         matchType = matchType or "Casual"
         if matchType == "" then
             matchType = "Casual" 
+        else
+            -- Nothing to do.
         end
+    else
+        -- Nothing to do.
     end
 
     match_type_message = match_type_message or ""
@@ -543,6 +581,8 @@ function main_character_select()
         while can_x ~= cursor[1] or can_y ~= cursor[2] do
             if map[can_x][can_y] and map[can_x][can_y] ~= map[cursor[1]][cursor[2]] then
                 break
+            else
+                -- Nothing to do.
             end
 
             can_x, can_y = wrap(1, can_x+dx, coordinate_x), wrap(1, can_y+dy, coordinate_y)
@@ -568,6 +608,8 @@ function main_character_select()
         for j=1, coordinate_y do
             if map[i][j] then
                name_to_xy[map[i][j]] = {i,j}
+            else
+                -- Nothing to do.
             end
         end
     end
@@ -605,6 +647,8 @@ function main_character_select()
             local orig_w, orig_h = icon:getDimensions()
             menu_draw(IMG_character_icons[character_display_names_to_original_names[str]],
             render_x, render_y, 0, button_width/orig_w, button_height/orig_h )
+        else
+            -- Nothing to do.
         end
 
         local y_add, x_add = 10, 30
@@ -619,8 +663,12 @@ function main_character_select()
             end
             if character_select_mode == "2p_net_vs" then
                 pstr = pstr .. "\n" .. op_name .. "'s level: " .. op_state.level
+            else
+                -- Nothing to do.
             end
             y_add, x_add = 9, 180
+        else
+            -- Nothing to do.
         end
 
         -- Formats pstr
@@ -628,24 +676,34 @@ function main_character_select()
             local my_type_selection, op_type_selection = "[casual]  ranked", "[casual]  ranked"
             if my_state.ranked then
                 my_type_selection = " casual  [ranked]"
+            else
+                -- Nothing to do.
             end
 
             if op_state.ranked then
                 op_type_selection = " casual  [ranked]"
+            else
+                -- Nothing to do.
             end
 
             pstr = pstr .. "\n" .. my_name .. ": " .. my_type_selection .. "\n" .. 
 
             op_name .. ": " .. op_type_selection
             y_add, x_add = 9, 180
+        else
+            -- Nothing to do.
         end
 
         if my_state.cursor == str then
             pstr = pstr.."\n" .. my_name
+        else
+            -- Nothing to do.
         end
 
         if op_state and op_name and op_state.cursor == str then
             pstr = pstr .. "\n" .. op_name
+        else
+            -- Nothing to do.
         end
 
         local cur_blink_frequency = 4
@@ -691,6 +749,8 @@ function main_character_select()
                     cursor_scale
                     )
             end
+        else
+            -- Nothing to do.
         end
         -- Draw player 1
         if my_state and my_state.cursor and
@@ -700,41 +760,43 @@ function main_character_select()
                 if (math.floor(menu_clock / cur_blink_frequency) + player_num) % 2 + 1 == player_num then
                     draw_cur_this_frame = true
                     cursor_frame = 1
+                else
+                    draw_cur_this_frame = false
+                end
             else
-                draw_cur_this_frame = false
+                draw_cur_this_frame = true
+                cursor_frame = (math.floor(menu_clock / cur_pos_change_frequency) + player_num) % 2 + 1
+                cur_img = IMG_char_sel_cursors[player_num][cursor_frame]
+            end
+
+            -- Draw image in the screen
+            if draw_cur_this_frame then
+                cur_img = IMG_char_sel_cursors[player_num][cursor_frame]
+                cur_img_left = IMG_char_sel_cursor_halves.left[player_num][cursor_frame]
+                cur_img_right = IMG_char_sel_cursor_halves.right[player_num][cursor_frame]
+                local cur_img_w, cur_img_h = cur_img:getDimensions()
+                local cursor_scale = (button_height + (spacing * 2)) / cur_img_h
+                menu_drawq(
+                    cur_img,
+                    cur_img_left,
+                    render_x-spacing,
+                    render_y-spacing,
+                    0,
+                    cursor_scale,
+                    cursor_scale
+                    )
+                menu_drawq(
+                    cur_img,
+                    cur_img_right,
+                    render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
+                    render_y - spacing,
+                    0,
+                    cursor_scale,
+                    cursor_scale
+                    )
             end
         else
-            draw_cur_this_frame = true
-            cursor_frame = (math.floor(menu_clock / cur_pos_change_frequency) + player_num) % 2 + 1
-            cur_img = IMG_char_sel_cursors[player_num][cursor_frame]
-        end
-
-        -- Draw image in the screen
-        if draw_cur_this_frame then
-            cur_img = IMG_char_sel_cursors[player_num][cursor_frame]
-            cur_img_left = IMG_char_sel_cursor_halves.left[player_num][cursor_frame]
-            cur_img_right = IMG_char_sel_cursor_halves.right[player_num][cursor_frame]
-            local cur_img_w, cur_img_h = cur_img:getDimensions()
-            local cursor_scale = (button_height + (spacing * 2)) / cur_img_h
-            menu_drawq(
-                cur_img,
-                cur_img_left,
-                render_x-spacing,
-                render_y-spacing,
-                0,
-                cursor_scale,
-                cursor_scale
-                )
-            menu_drawq(
-                cur_img,
-                cur_img_right,
-                render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
-                render_y - spacing,
-                0,
-                cursor_scale,
-                cursor_scale
-                )
-        end
+            -- Nothing to do.
         end
         gprint(pstr, render_x + 6, render_y + y_add)
     end
@@ -754,138 +816,160 @@ function main_character_select()
                             op_state = message.menu_state
                         elseif message.player_number == 1 then
                             my_state = message.menu_state
+                        else
+                            -- Nothing to do.
                         end
                     else
-                        op_state = message.menu_state
+                        op_state = message.menu_state                        
+                    end 
+                else
+                    -- Nothing to do.
                 end
-            end
             
-            assert(message, "message is null")
-            if message.ranked_match_approved then
-                matchType = "Ranked"
-                match_type_message = ""
-            elseif message.ranked_match_denied then
-                matchType = "Casual"
-                match_type_message = "Not ranked. "
-                if message.reasons then
-                    match_type_message = match_type_message .. (message.reasons[1] or "Reason unknown")
+                assert(message, "message is null")
+                if message.ranked_match_approved then
+                    matchType = "Ranked"
+                    match_type_message = ""
+                elseif message.ranked_match_denied then
+                    matchType = "Casual"
+                    match_type_message = "Not ranked. "
+                    if message.reasons then
+                        match_type_message = match_type_message .. (message.reasons[1] or "Reason unknown")
+                    else
+                        -- Nothing to do.
+                    end
                 end
-            end
-            if message.leave_room then
-                my_win_count = 0
-                op_win_count = 0
-                write_char_sel_settings_to_file()
-                return main_net_vs_lobby
-            end
-            
-            if message.match_start or replay_of_match_so_far then
-                local fake_P1 = P1
-                print("currently_spectating: " .. tostring(currently_spectating))
-                local fake_P2 = P2
-                P1 = Stack(1, "vs", message.player_settings.level,
-                    message.player_settings.character, message.player_settings.player_number)
-                P2 = Stack(2, "vs", message.opponent_settings.level,
-                    message.opponent_settings.character, message.opponent_settings.player_number)
-                if currently_spectating then
-                    P1.panel_buffer = fake_P1.panel_buffer
-                    P1.gpanel_buffer = fake_P1.gpanel_buffer
+                if message.leave_room then
+                    my_win_count = 0
+                    op_win_count = 0
+                    write_char_sel_settings_to_file()
+                    return main_net_vs_lobby
+                else
+                    -- Nothing to do.
                 end
                 
-                P2.panel_buffer = fake_P2.panel_buffer
-                P2.gpanel_buffer = fake_P2.gpanel_buffer
-                P1.garbage_target = P2
-                P2.garbage_target = P1
-                P2.pos_x = 172
-                P2.score_x = 410
-                replay.vs = {
-                    P = "",
-                    O = "",
-                    I = "",
-                    Q = "",
-                    R = "",
-                    in_buf = "",
-                    P1_level = P1.level,
-                    P2_level = P2.level,
-                    P1_name = my_name,
-                    P2_name = op_name,
-                    P1_char = P1.character,
-                    P2_char = P2.character,
-                    ranked = message.ranked
-                }
-                if currently_spectating and replay_of_match_so_far then --we joined a match in progress
-                    replay.vs = replay_of_match_so_far.vs
-                    P1.input_buffer = replay_of_match_so_far.vs.in_buf
-                    P1.panel_buffer = replay_of_match_so_far.vs.P
-                    P1.gpanel_buffer = replay_of_match_so_far.vs.Q
-                    P2.input_buffer = replay_of_match_so_far.vs.I
-                    P2.panel_buffer = replay_of_match_so_far.vs.O
-                    P2.gpanel_buffer = replay_of_match_so_far.vs.R
-                    
-                    if replay.vs.ranked then
-                        matchType = "Ranked"
-                        match_type_message = ""
-                    else 
-                        matchType = "Casual"
+                if message.match_start or replay_of_match_so_far then
+                    local fake_P1 = P1
+                    print("currently_spectating: " .. tostring(currently_spectating))
+                    local fake_P2 = P2
+                    P1 = Stack(1, "vs", message.player_settings.level,
+                        message.player_settings.character, message.player_settings.player_number)
+                    P2 = Stack(2, "vs", message.opponent_settings.level,
+                        message.opponent_settings.character, message.opponent_settings.player_number)
+                    if currently_spectating then
+                        P1.panel_buffer = fake_P1.panel_buffer
+                        P1.gpanel_buffer = fake_P1.gpanel_buffer
+                    else
+                        -- Nothing to do.
                     end
                     
-                    replay_of_match_so_far = nil
-                    P1.play_to_end = true  --this makes foreign_run run until caught up
-                    P2.play_to_end = true
+                    P2.panel_buffer = fake_P2.panel_buffer
+                    P2.gpanel_buffer = fake_P2.gpanel_buffer
+                    P1.garbage_target = P2
+                    P2.garbage_target = P1
+                    P2.pos_x = 172
+                    P2.score_x = 410
+                    replay.vs = {
+                        P = "",
+                        O = "",
+                        I = "",
+                        Q = "",
+                        R = "",
+                        in_buf = "",
+                        P1_level = P1.level,
+                        P2_level = P2.level,
+                        P1_name = my_name,
+                        P2_name = op_name,
+                        P1_char = P1.character,
+                        P2_char = P2.character,
+                        ranked = message.ranked
+                    }
+                    if currently_spectating and replay_of_match_so_far then --we joined a match in progress
+                        replay.vs = replay_of_match_so_far.vs
+                        P1.input_buffer = replay_of_match_so_far.vs.in_buf
+                        P1.panel_buffer = replay_of_match_so_far.vs.P
+                        P1.gpanel_buffer = replay_of_match_so_far.vs.Q
+                        P2.input_buffer = replay_of_match_so_far.vs.I
+                        P2.panel_buffer = replay_of_match_so_far.vs.O
+                        P2.gpanel_buffer = replay_of_match_so_far.vs.R
+                        
+                        if replay.vs.ranked then
+                            matchType = "Ranked"
+                            match_type_message = ""
+                        else 
+                            matchType = "Casual"
+                        end
+                        
+                        replay_of_match_so_far = nil
+                        P1.play_to_end = true  --this makes foreign_run run until caught up
+                        P2.play_to_end = true
+                    else
+                        -- Nothing to do.
+                    end
+                    
+                if not currently_spectating then
+                    ask_for_gpanels("000000")
+                    ask_for_panels("000000")
+                else
+                    -- Nothing to do.
                 end
                 
-            if not currently_spectating then
-                ask_for_gpanels("000000")
-                ask_for_panels("000000")
-            end
-            
-            to_print = "Game is starting!\n".."Level: "..P1.level.."\nOpponent's level: "..P2.level
-            
-            if P1.play_to_end or P2.play_to_end then
-                to_print = "Joined a match in progress.\nCatching up..."
-            end
+                to_print = "Game is starting!\n".."Level: "..P1.level.."\nOpponent's level: "..P2.level
+                
+                if P1.play_to_end or P2.play_to_end then
+                    to_print = "Joined a match in progress.\nCatching up..."
+                else
+                    -- Nothing to do.
+                end
 
-            for i=1, 30 do
-                gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
-                do_messages()
-                coroutine_wait()
-            end
-            
-            local game_start_timeout = 0
-            
-            -- start's the game for 2p mode
-            while P1.panel_buffer == "" or P2.panel_buffer == ""
-                or P1.gpanel_buffer == "" or P2.gpanel_buffer == "" do
-              --testing getting stuck here at "Game is starting"
-                game_start_timeout = game_start_timeout + 1
-                print("game_start_timeout = " .. game_start_timeout)
-                print("P1.panel_buffer = " .. P1.panel_buffer)
-                print("P2.panel_buffer = " .. P2.panel_buffer)
-                print("P1.gpanel_buffer = " .. P1.gpanel_buffer)
-                print("P2.gpanel_buffer = " .. P2.gpanel_buffer)
-                gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
-                do_messages()
-                coroutine_wait()
-                local LIMITTIMEOUT = 500
+                for i=1, 30 do
+                    gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
+                    do_messages()
+                    coroutine_wait()
+                end
+                
+                local game_start_timeout = 0
+                
+                -- start's the game for 2p mode
+                while P1.panel_buffer == "" or P2.panel_buffer == ""
+                    or P1.gpanel_buffer == "" or P2.gpanel_buffer == "" do
+                --testing getting stuck here at "Game is starting"
+                    game_start_timeout = game_start_timeout + 1
+                    print("game_start_timeout = " .. game_start_timeout)
+                    print("P1.panel_buffer = " .. P1.panel_buffer)
+                    print("P2.panel_buffer = " .. P2.panel_buffer)
+                    print("P1.gpanel_buffer = " .. P1.gpanel_buffer)
+                    print("P2.gpanel_buffer = " .. P2.gpanel_buffer)
+                    gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
+                    do_messages()
+                    coroutine_wait()
+                    local LIMITTIMEOUT = 500
 
-                if game_start_timeout > LIMITTIMEOUT then
-                    return main_dumb_transition, {main_select_mode, 
-                                "game-is-starting bug diagnostic version 2\n\ngame start timed out."
-                                .. "\n Please screenshot this and\npost it in #panel-attack-bugs-features"
-                                .."\n".."message.match_start = "..(tostring(message.match_start) or "nil")
-                                .."\n".."replay_of_match_so_far = "..(tostring(replay_of_match_so_far) or "nil")
-                                .."\n".."P1.panel_buffer = "..P1.panel_buffer
-                                .."\n".."P2.panel_buffer = "..P2.panel_buffer
-                                .."\n".."P1.gpanel_buffer = "..P1.gpanel_buffer
-                                .."\n".."P2.gpanel_buffer = "..P2.gpanel_buffer,
-                                600}
+                    if game_start_timeout > LIMITTIMEOUT then
+                        return main_dumb_transition, {main_select_mode, 
+                                    "game-is-starting bug diagnostic version 2\n\ngame start timed out."
+                                    .. "\n Please screenshot this and\npost it in #panel-attack-bugs-features"
+                                    .."\n".."message.match_start = "..(tostring(message.match_start) or "nil")
+                                    .."\n".."replay_of_match_so_far = "..(tostring(replay_of_match_so_far) or "nil")
+                                    .."\n".."P1.panel_buffer = "..P1.panel_buffer
+                                    .."\n".."P2.panel_buffer = "..P2.panel_buffer
+                                    .."\n".."P1.gpanel_buffer = "..P1.gpanel_buffer
+                                    .."\n".."P2.gpanel_buffer = "..P2.gpanel_buffer,
+                                    600}
+                    else
+                        -- Nothing to do.
+                    end
+                end
+                
+                P1:starting_state()
+                P2:starting_state()
+                return main_net_vs
+                else
+                    -- Nothing to do.
                 end
             end
-            
-            P1:starting_state()
-            P2:starting_state()
-            return main_net_vs
-            end
-        end
+        else
+            -- Nothing to do.
         end
 
         -- responsible for displaying the strings on the display
@@ -919,6 +1003,8 @@ function main_character_select()
             else
                 opRatingDifference = "(" .. global_current_room_ratings[op_player_number].difference .. ") "
             end
+        else
+            -- Nothing to do.
         end
 
         local state = ""
@@ -927,22 +1013,32 @@ function main_character_select()
 
         if serverSupportsRanking then
             state = state .. ":  Rating: " .. myRatingDifference .. global_current_room_ratings[my_player_number].new
+        else
+            -- Nothing to do.
         end
 
         if character_select_mode == "2p_net_vs" or character_select_mode == "2p_local_vs" then
             state = state .. "  Wins: " .. my_win_count
+        else
+            -- Nothing to do.
         end
 
         if serverSupportsRanking or my_win_count + op_win_count > 0 then
             state = state .. "  Win Ratio:"
+        else
+            -- Nothing to do.
         end
 
         if my_win_count + op_win_count > 0 then
             state = state .. "  actual: " .. (100 * round(my_win_count/(op_win_count+my_win_count), 2)) .. "%"
+        else
+            -- Nothing to do.
         end
 
         if serverSupportsRanking then
             state = state .. "  expected: " .. my_expected_win_ratio .. "%"
+        else
+            -- Nothing to do.
         end
 
         state = state .. "  Char: " .. character_display_names[my_state.character]..
@@ -956,33 +1052,47 @@ function main_character_select()
             if serverSupportsRanking then
                 state = state .. ":  Rating: " .. opRatingDifference..
                    global_current_room_ratings[op_player_number].new
+            else
+                -- Nothing to do.
             end
 
             state = state .. "  Wins: " .. op_win_count 
 
             if serverSupportsRanking or my_win_count + op_win_count > 0 then
                 state = state .. "  Win Ratio:"
+            else
+                -- Nothing to do.
             end
 
             if my_win_count + op_win_count > 0 then
                 state = state .. "  actual: " .. (100*round(op_win_count/(op_win_count+my_win_count),2)) .. "%"
+            else
+                -- Nothing to do.
             end
 
             if serverSupportsRanking then
                 state = state .. "  expected: " .. op_expected_win_ratio .. "%"
+            else
+                -- Nothing to do.
             end
             
             state = state.."  Char: " .. character_display_names[op_state.character] .. 
                 "  Ready: " .. tostring(op_state.ready or false)
             --state = state.." "..json.encode(op_state)
+        else
+            -- Nothing to do.
         end
         gprint(state, 50, 50)
         if character_select_mode == "2p_net_vs" then
             if not my_state.ranked and not op_state.ranked then
                 match_type_message = ""
+            else
+                -- Nothing to do.
             end
-        gprint(matchType, 375, 15)
-        gprint(match_type_message, 100, 85)
+            gprint(matchType, 375, 15)
+            gprint(match_type_message, 100, 85)
+        else
+            -- Nothing to do.
         end
 
         coroutine_wait()
@@ -995,12 +1105,20 @@ function main_character_select()
                     elseif MENU_KEY_LEFT(k) then
                         if selected and active_str == "level" then
                             CONFIG_TABLE.level = bound(1, CONFIG_TABLE.level - 1, 10)
+                        else
+                            -- Nothing to do.
                         end
-                    if not selected then move_cursor(left) end
+                    if not selected then
+                        move_cursor(left)
+                    else
+                        -- Nothing to do.
+                    end
                     elseif MENU_KEY_RIGHT(k) then
                         if selected and active_str == "level" then
                             CONFIG_TABLE.level = bound(1, CONFIG_TABLE.level + 1, 10)
-                end
+                        else
+                            -- Nothing to do.
+                        end
             -- handles keys input
             if not selected then move_cursor(right) end
             elseif MENU_KEY_ENTER(k) then
@@ -1022,7 +1140,6 @@ function main_character_select()
                 active_str = "ready"
                 cursor = shallowcpy(name_to_xy["ready"])
             end
-
             elseif MENU_KEY_ESCAPE(k) then
                 if active_str == "leave" then
                     if character_select_mode == "2p_net_vs" then
@@ -1059,10 +1176,14 @@ function main_character_select()
             make_local_gpanels(P1, "000000")
             P1:starting_state()
             return main_dumb_transition, {main_local_vs_yourself, "Game is starting...", 30, 30}
+        else
+            -- Nothing to do.
         end
 
         if character_select_mode == "2p_net_vs" then 
             do_messages()
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1202,6 +1323,8 @@ function main_net_vs_lobby()
         for _, v in ipairs(unpaired_players) do
             if v ~= CONFIG_TABLE.name then
                 menu_options[#menu_options + 1] = v
+            else
+                -- Nothing to do.
             end
         end
         
@@ -1263,6 +1386,8 @@ function main_net_vs_lobby()
         
         if showing_leaderboard then
             gprint(leaderboard_string, 500, 160)
+        else
+            -- Nothing to do.
         end
       
         coroutine_wait()
@@ -1276,6 +1401,8 @@ function main_net_vs_lobby()
                             leaderboard_first_idx_to_show,
                             leaderboard_last_idx_to_show
                             )
+                else
+                    -- Nothing to do.
                 end
             else
                 active_idx = wrap(1, active_idx-1, #menu_options)
@@ -1330,6 +1457,8 @@ function main_net_vs_lobby()
             print("#menu_options: "..#menu_options.."  idx_old: "
             ..prev_act_idx.."  idx_new: "..active_idx.."  active_back: "..tostring(active_back))
             prev_act_idx = active_idx
+        else
+            -- Nothing to do.
         end
         
         do_messages()
@@ -1347,6 +1476,8 @@ function update_win_counts(win_counts)
     elseif P1.player_number == 2 then
         my_win_count = win_counts[2] or 0
         op_win_count = win_counts[1] or 0
+    else
+        -- Nothing to do.
     end
 end
 
@@ -1360,11 +1491,15 @@ function spectator_list_string(list)
         str = str..v
         if k < #list then
             str = str.."\n"
+        else
+            -- Nothing to do.
         end
     end
     
     if str ~= "" then
         str = "Spectator(s):\n"..str
+    else
+        -- Nothing to do.
     end
     
     return str
@@ -1395,6 +1530,8 @@ function build_viewable_leaderboard_string(report, first_viewable_idx, last_view
         
         if i < #report then
             str = str .. "\n"
+        else
+            -- Nothing to do.
         end
     end
     
@@ -1459,7 +1596,9 @@ function main_net_vs_setup(ip)
         if currently_spectating then
             P1.panel_buffer = fake_P1.panel_buffer
             P1.gpanel_buffer = fake_P1.gpanel_buffer
-    end
+        else
+            -- Nothing to do.
+        end
     
     P2.panel_buffer = fake_P2.panel_buffer
     P2.gpanel_buffer = fake_P2.gpanel_buffer
@@ -1509,10 +1648,11 @@ function main_net_vs()
     local k = keyboard[1]  --may help with spectators leaving games in progress
     local end_text = nil
     consuming_timesteps = true
-    local op_name_y = 40
-
+    local op_name_y = nil
     if string.len(my_name) > 12 then
         op_name_y = 55
+    else
+        op_name_y = 40
     end
 
     while true do
@@ -1522,6 +1662,8 @@ function main_net_vs()
             if message.leave_room then
                 write_char_sel_settings_to_file()
                 return main_net_vs_lobby
+            else
+                -- Nothing to do.
             end
         end
 
@@ -1532,6 +1674,8 @@ function main_net_vs()
 
         if not CONFIG_TABLE.debug_mode then --this is printed in the same space as the debug details
             gprint(spectators_string, 315, 265)
+        else
+            -- Nothing to do.
         end
         
         if matchType == "Ranked" then
@@ -1542,7 +1686,11 @@ function main_net_vs()
             if global_current_room_ratings[op_player_number] 
                 and global_current_room_ratings[op_player_number].new then
                 gprint("Rating: "..global_current_room_ratings[op_player_number].new, 410, 85)
+            else
+                -- Nothing to do.
             end
+        else
+            -- Nothing to do.
         end
         
         if not (P1 and P1.play_to_end) and not (P2 and P2.play_to_end) then
@@ -1555,8 +1703,12 @@ function main_net_vs()
                 op_win_count = 0
                 json_send({leave_room=true})
                 return main_net_vs_lobby
+            else
+                -- Nothing to do.
             end
             do_messages()
+        else
+            -- Nothing to do.
         end
       
         print(P1.CLOCK, P2.CLOCK)
@@ -1581,6 +1733,8 @@ function main_net_vs()
         end
         if not P2.game_over then
             P2:foreign_run()
+        else
+            -- Nothing to do.
         end
         
         local outcome_claim = nil
@@ -1595,7 +1749,8 @@ function main_net_vs()
             end_text = my_name.." Wins ^^"
             my_win_count = my_win_count + 1 -- leave this in
             outcome_claim = P1.player_number
-        
+        else
+            -- Nothing to do.
         end
         
         if end_text then
@@ -1636,6 +1791,8 @@ function main_net_vs()
             else
                 return main_dumb_transition, {main_character_select, end_text, 45, 180}
             end
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1671,7 +1828,11 @@ main_local_vs_setup = multi_func(function()
             elseif MENU_KEY_DOWN(k) or MENU_KEY_LEFT(k) then
                 if not chosen[i] then
                     maybe[i] = bound(1, maybe[i] - 1, 10)
+                else
+                    -- Nothing to do.
                 end
+            else
+                -- Nothing to do.
             end
         end
     end
@@ -1722,6 +1883,8 @@ function main_local_vs()
             if not P1.game_over and not P2.game_over then
                 P1:local_run()
                 P2:local_run()
+            else
+                -- Nothing to do.
             end
         end)
         
@@ -1731,10 +1894,14 @@ function main_local_vs()
             end_text = "P2 wins ^^"
         elseif P2.game_over and P2.CLOCK <= P1.CLOCK then
             end_text = "P1 wins ^^"
+        else
+            -- Nothing to do.
         end
         
         if end_text then
             return main_dumb_transition, {main_select_mode, end_text, 45}
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1774,6 +1941,8 @@ function main_local_vs_yourself()
 
         if end_text then
             return main_dumb_transition, {main_character_select, end_text, 45}
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1811,6 +1980,8 @@ function main_replay_vs()
         else
             matchType = "Casual"
         end
+    else
+        -- Nothing to do.
     end
 
     P1:starting_state()
@@ -1818,9 +1989,11 @@ function main_replay_vs()
     
     local end_text = nil
     local run = true
-    local op_name_y = 40
+    local op_name_y = nil
     if string.len(my_name) > 12 then
         op_name_y = 55
+    else
+        op_name_y = 40
     end
     
     while true do
@@ -1836,28 +2009,42 @@ function main_replay_vs()
                 str = str .. "\n".. k .. ": " .. tostring(v)
             end
             gprint(str, 350, 400)
+        else
+            -- Nothing to do.
         end
         
         coroutine_wait()
         if this_frame_keys["escape"] then
             return main_select_mode
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["return"] then
             run = not run
+        else
+            -- Nothing to do.
         end
       
         if this_frame_keys["\\"] then
             run = false
+        else
+            -- Nothing to do.
         end
         
         if run or this_frame_keys["\\"] then
             if not P1.game_over then
                 P1:foreign_run()
+            else
+                -- Nothing to do.
             end
             if not P2.game_over then
                 P2:foreign_run()
+            else
+                -- Nothing to do.
             end
+        else
+            -- Nothing to do.
         end
         
         if P1.game_over and P2.game_over and P1.CLOCK == P2.CLOCK then
@@ -1866,7 +2053,7 @@ function main_replay_vs()
             if replay.P2_name and replay.P2_name ~= "anonymous" then
                 end_text = replay.P2_name .. " wins"
             else
-            end_text = "P2 wins"
+                end_text = "P2 wins"
             end
         elseif P2.game_over and P2.CLOCK <= P1.CLOCK then
             if replay.P1_name and replay.P1_name ~= "anonymous" then
@@ -1878,6 +2065,8 @@ function main_replay_vs()
         
         if end_text then
             return main_dumb_transition, {main_select_mode, end_text}
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1893,6 +2082,8 @@ function main_replay_endless()
     if replay == nil or replay.speed == nil then
         return main_dumb_transition,
             {main_select_mode, "I don't have an endless replay :("}
+    else
+        -- Nothing to do.
     end
     
     P1 = Stack(1, "endless", replay.speed, replay.difficulty)
@@ -1909,22 +2100,32 @@ function main_replay_endless()
         coroutine_wait()
         if this_frame_keys["escape"] then
             return main_select_mode
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["return"] then
             run = not run
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["\\"] then
             run = false
+        else
+            -- Nothing to do.
         end
         
         if run or this_frame_keys["\\"] then
             if P1.game_over then
             --  @todo proper game over.
                 return main_dumb_transition, {main_select_mode, "You scored " .. P1.score}
+            else
+                -- Nothing to do.
             end
             P1:foreign_run()
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1937,6 +2138,8 @@ function main_replay_puzzle()
     if replay.in_buf == nil or replay.in_buf == "" then
       return main_dumb_transition,
         {main_select_mode, "I don't have a puzzle replay :("}
+    else
+        -- Nothing to do.
     end
     
     P1 = Stack(1, "puzzle")
@@ -1953,19 +2156,27 @@ function main_replay_puzzle()
                     str = str .. "\n" .. k .. ": " .. tostring(v)
                 end
             gprint(str, 350, 400)
+        else
+            -- Nothing to do.
         end
         
         coroutine_wait()
         if this_frame_keys["escape"] then
             return main_select_mode
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["return"] then
             run = not run
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["\\"] then
             run = false
+        else
+            -- Nothing to do.
         end
         
         if run or this_frame_keys["\\"] then
@@ -1975,9 +2186,15 @@ function main_replay_puzzle()
                     return main_dumb_transition, {main_select_mode, "You win!"}
                 elseif P1.puzzle_moves == 0 then
                     return main_dumb_transition, {main_select_mode, "You lose :("}
+                else
+                    -- Nothing to do.
                 end
+            else
+                -- Nothing to do.
             end
             P1:foreign_run()
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1997,6 +2214,8 @@ function make_main_puzzle(puzzles)
         
         if awesome_idx == nil then
             awesome_idx = math.random(#puzzles)
+        else
+            -- Nothing to do.
         end
         
         P1:set_puzzle_state(unpack(puzzles[awesome_idx]))
@@ -2010,19 +2229,28 @@ function make_main_puzzle(puzzles)
                 if P1:puzzle_done() then
                     awesome_idx = (awesome_idx % #puzzles) + 1
                     write_replay_file()
-                if awesome_idx == 1 then
-                    return main_dumb_transition, {main_select_puzz, "You win!"}
-                else
-                    return main_dumb_transition, {ret, "You win!"}
+                    if awesome_idx == 1 then
+                        return main_dumb_transition, {main_select_puzz, "You win!"}
+                    else
+                        return main_dumb_transition, {ret, "You win!"}
                 end
-            elseif P1.puzzle_moves == 0 then
-                write_replay_file()
-                return main_dumb_transition, {main_select_puzz, "You lose :("}
-            end
-        end
+                elseif P1.puzzle_moves == 0 then
+                    write_replay_file()
+                    return main_dumb_transition, {main_select_puzz, "You lose :("}
+                else
+                    -- Nothing to do.
+                end
+            else
+                -- Nothing to do.
+            end 
         run_function_as_60hz(function() 
             if P1.n_active_panels ~= 0 or P1.prev_active_panels ~= 0 or
-                P1.puzzle_moves ~= 0 then P1:local_run() end end)
+                P1.puzzle_moves ~= 0 then
+                    P1:local_run()
+                else
+                    -- Nothing to do.
+                end
+            end)
         end
     end
     return ret
@@ -2069,6 +2297,8 @@ do
                 else
                     active_idx = #menu_options
                 end
+            else
+                -- Nothing to do.
             end
         end
     end
@@ -2123,6 +2353,8 @@ function main_config_input()
                 if val then
                     k[key_names[idx]] = key
                     brk = true
+                else
+                    -- Nothing to do.
                 end
             end
         end
@@ -2187,7 +2419,9 @@ function main_options()
     for k,v in ipairs(raw_assets_dir_list) do
         if love.filesystem.isDirectory("assets/"..v) and v ~= "Example folder structure" then
             asset_sets[#asset_sets + 1] = v
-          end
+        else
+            -- Nothing to do.
+        end
     end
 
     local raw_sounds_dir_list = love.filesystem.getDirectoryItems("sounds")
@@ -2195,7 +2429,9 @@ function main_options()
     for k,v in ipairs(raw_sounds_dir_list) do
         if love.filesystem.isDirectory("sounds/"..v) and v ~= "Example folder structure" then
             sound_sets[#sound_sets + 1] = v
-          end
+        else
+            -- Nothing to do.
+        end
     end
 
     print("asset_sets:")
@@ -2248,6 +2484,8 @@ function main_options()
             to_print2 = to_print2 .. menu_options[i][2] 
             if active_idx == i and selected then
                   to_print2 = to_print2 .. " >"
+            else
+                -- Nothing to do.
             end
             
             to_print2 = to_print2 .. "\n"
@@ -2262,6 +2500,8 @@ function main_options()
         if menu_options[active_idx][3] == "numeric" then
             if menu_options[active_idx][2] > menu_options[active_idx][4] then --value > minimum
                   menu_options[active_idx][2] = menu_options[active_idx][2] - 1
+            else
+                -- Nothing to do.
             end
           elseif menu_options[active_idx][3] == "multiple choice" then
             adjust_backwards = true
@@ -2273,6 +2513,8 @@ function main_options()
             --sound_source for this menu item exists and not play_while_selected
             menu_options[active_idx][6]:stop()
             menu_options[active_idx][6]:play()
+          else
+            -- Nothing to do.
           end
     end
 
@@ -2281,10 +2523,14 @@ function main_options()
         if menu_options[active_idx][3] == "numeric" then
             if menu_options[active_idx][2] < menu_options[active_idx][5] then --value < maximum
                   menu_options[active_idx][2] = menu_options[active_idx][2] + 1
+            else
+                -- Nothing to do.
             end
-          elseif menu_options[active_idx][3] == "multiple choice" then
+        elseif menu_options[active_idx][3] == "multiple choice" then
             adjust_active_value = true
-          end
+        else
+            -- Nothing to do.
+        end
       --the following is enough for "bool"
       adjust_active_value = true
 
@@ -2292,7 +2538,9 @@ function main_options()
             --sound_source for this menu item exists and not play_while_selected
             menu_options[active_idx][6]:stop()
             menu_options[active_idx][6]:play()
-          end
+        else
+            -- Nothing to do.
+        end
     end
 
     get_items()
