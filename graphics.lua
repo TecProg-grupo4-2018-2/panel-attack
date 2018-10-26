@@ -4,15 +4,14 @@
 -- @module graphics 
 
 require("input")
-local ceil = math.ceil --rounding -- T24
-local len_garbage = #garbage_bounce_table --length of lua garbage -- T24
+local len_garbage = #garbage_bounce_table --length of lua garbage 
 
 --- upload image file and returns drawn image
 -- @function load_img
 -- @param image_path image archive
 -- @return draw_image drawing image
 function load_img(image_path)
-    local img -- T24
+    local img 
     assert(image_path)  
     
     -- if the path doesn't exist, creates the path 
@@ -54,14 +53,14 @@ function draw(img, x, y, rot, x_scale, y_scale)
     x_scale = x_scale or 1
     y_scale = y_scale or 1
 
-    gfx_q:push({love.graphics.draw,{
+    gfx_q:push({love.graphics.draw, {
         img,
         x*GFX_SCALE,
         y*GFX_SCALE,
         rot,
         x_scale*GFX_SCALE,
         y_scale*GFX_SCALE
-     }
+    }
     })
 end
 
@@ -86,8 +85,7 @@ function menu_draw(img, x, y, rot, x_scale,y_scale)
     x_scale = x_scale or 1
     y_scale = y_scale or 1
 
-    gfx_q:push({love.graphics.draw,
-    {
+    gfx_q:push({love.graphics.draw, {
         img,
         x,
         y,
@@ -122,8 +120,7 @@ function menu_drawq(img, quad, x, y, rot, x_scale, y_scale)
     x_scale = x_scale or 1
     y_scale = y_scale or 1
 
-    gfx_q:push({love.graphics.draw,
-    {
+    gfx_q:push({love.graphics.draw, {
         img,
         quad,
         x,
@@ -151,8 +148,7 @@ function grectangle(mode, x, y, width_rectangle, height_rectangle)
     assert(width_rectangle > 0, "x_scale can't be negative") 
     assert(height_rectangle > 0, "y_scale can't be negative")
 
-    gfx_q:push({love.graphics.rectangle,
-    {
+    gfx_q:push({love.graphics.rectangle, {
         mode,
         x,
         y,
@@ -171,8 +167,7 @@ end
 function gprint(str, x, y)
     assert(str) 
 
-    gfx_q:push({love.graphics.print,
-    {
+    gfx_q:push({love.graphics.print, {
         str,
         x,
         y
@@ -180,12 +175,6 @@ function gprint(str, x, y)
     })
 end
 
--- current state of red, green, blue and alpha
-local r_current = 0
-local g_current = 0
-local b_current = 0
-local a_current = 0
-local MAX_ALPHA
 
 --- equals the colors received if the first ones are equal to zero  
 -- @function set_color 
@@ -199,14 +188,22 @@ function set_color(r, g, b, a)
     assert(g) 
     assert(b) 
     
+    -- current state of red, green, blue and alpha
+    local r_current = 0
+    local g_current = 0
+    local b_current = 0
+    local a_current = 0
+    local MAX_ALPHA
+
     a = a or MAX_ALPHA
 
     -- only do it if this color isn't the same as the previous one
     if r_current ~= r or g_current ~= g or b_current ~= b or a_current ~= a then
         r_current, g_current, b_current, a_current = r, g, b, a
         gfx_q:push({love.graphics.setColor, {r, g, b, a}})
+    else
+        -- nothing to do
     end
-
 end
 
 local floor = math.floor
@@ -218,9 +215,9 @@ local floor = math.floor
 function graphics_init()
     IMG_panels = {}
 
-    for i = 1,8 do
+    for i = 1, 8 do
         IMG_panels[i]={}
-        for j = 1,7 do
+        for j = 1, 7 do
             IMG_panels[i][j]=load_img("panel"..tostring(i)..tostring(j)..".png")
         end
     end
@@ -249,14 +246,10 @@ function graphics_init()
         end
     end
 
-    IMG_metal_flash = load_img("garbageflash.png")
-    IMG_metal = load_img("metalmid.png")
-    IMG_metal_l = load_img("metalend0.png")
-    IMG_metal_r = load_img("metalend1.png")
-
-
-    IMG_frame = load_img("frame.png")
-    IMG_wall = load_img("wall.png")
+    local IMG_metal_flash = load_img("garbageflash.png")
+    local IMG_metal = load_img("metalmid.png")
+    local IMG_metal_l = load_img("metalend0.png")
+    local IMG_metal_r = load_img("metalend1.png")
 
     IMG_cards = {}
     IMG_cards[true] = {}
@@ -282,47 +275,52 @@ function graphics_init()
         IMG_character_icons[name] = load_img(""..name.."/icon.png")
     end
 
-    MAX_SUPPORTED_PLAYERS = 2
+    local MAX_SUPPORTED_PLAYERS = 2
     IMG_char_sel_cursors = {}
 
     for player_num = 1, MAX_SUPPORTED_PLAYERS do
         IMG_char_sel_cursors[player_num] = {}
+
         for position_num = 1, 2 do
-            IMG_char_sel_cursors[player_num][position_num] = load_img(
-                "char_sel_cur_"..player_num.."P_pos"..position_num..".png")
+            local image_name = "char_sel_cur_"..player_num.."P_pos"..
+                                 position_num..".png"
+            IMG_char_sel_cursors[player_num][position_num] = load_img(image_name)
         end
     end
 
     IMG_char_sel_cursor_halves = {left={}, right={}}
 
-    for player_num= 1, MAX_SUPPORTED_PLAYERS do
+    for player_num = 1, MAX_SUPPORTED_PLAYERS do -- position cursor
         IMG_char_sel_cursor_halves.left[player_num] = {}
 
-        for position_num= 1, 2 do
-            local cur_width, cur_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
-            local half_width, half_height = cur_width/2, cur_height/2
+        for position_num = 1, 2 do
+            local cur_width_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
+            local half_width, half_height = cur_width_height/2, cur_width_height/2
+
             IMG_char_sel_cursor_halves["left"][player_num][position_num] =
-                love.graphics.newQuad(0,0,half_width,cur_height,cur_width, 
-                                        cur_height)
+                love.graphics.newQuad(0, 0, half_width, cur_width_height, cur_width_height, 
+                                         cur_width_height)
         end
 
         IMG_char_sel_cursor_halves.right[player_num] = {}
 
-        for position_num= 1, 2 do
-            local cur_width, cur_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
-            local half_width, half_height = cur_width/2, cur_height/2
+        for position_num = 1, 2 do
+            local cur_width_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
+            local half_width, half_height = cur_width_height/2, cur_width_height/2
+
             IMG_char_sel_cursor_halves.right[player_num][position_num] = 
-                love.graphics.newQuad(half_width,0,half_width,cur_height,
-                                        cur_width, cur_height)
+                love.graphics.newQuad(half_width,0,half_width,cur_width_height,
+                                        cur_width_height, cur_width_height)
         end
     end
 
     character_display_names = {} -- players names 
 
-    for k, original_name in ipairs(characters) do
-        name_txt_file = love.filesystem.newFile("assets/"..config.assets_dir..
-                                               "/"..original_name.."/name.txt")
-        open_success, err = name_txt_file:open("r")
+    for k, original_name in ipairs(characters) do -- show names
+        local file_name = "assets/"..config.assets_dir.."/"..original_name
+                            .."/name.txt"
+        local name_txt_file = love.filesystem.newFile(file_name)
+        local open_success, err = name_txt_file:open("r")
         local display_name = name_txt_file:read(name_txt_file:getSize())
 
         if display_name then
@@ -331,8 +329,6 @@ function graphics_init()
             character_display_names[original_name] = original_name
         end
     end
-
-    print("character_display_names: ")
 
     for k, v in pairs(character_display_names) do
         print(k.." = "..v)
@@ -388,6 +384,8 @@ end
 -- @return nil 
 function Stack.render(self)
     assert(self)
+    
+    local ceil = math.ceil --rounding -- T24
     local mouse_x, mouse_y -- coordinates of mouse
 
     if config.debug_mode then
@@ -405,8 +403,8 @@ function Stack.render(self)
     local shake_idx = #shake_arr - self.shake_time
     local shake = ceil((shake_arr[shake_idx] or 0) * 13)
 
-    for row = 0,self.height do
-        for col = 1,self.width do
+    for row = 0, self.height do
+        for col = 1, self.width do
 
             local panel = self.panels[row][col]
             local draw_x = (col-1) * 16 + self.pos_x
@@ -567,6 +565,9 @@ function Stack.render(self)
         end
     end
 
+    IMG_frame = load_img("frame.png")
+    IMG_wall = load_img("wall.png")
+
     draw(IMG_frame, self.pos_x-4, self.pos_y-4)
     draw(IMG_wall, self.pos_x, self.pos_y - shake + self.height*16)
 
@@ -665,6 +666,8 @@ function scale_letterbox(width, height, w_ratio, h_ratio)
     if height_ratio > width_ratio then
         local scaled_height = h_ratio * width_ratio
         return 0, (height - scaled_height) / 2, width, scaled_height
+    else
+        -- nothing to do
     end
 
     local scaled_width = w_ratio * height_ratio
