@@ -4,7 +4,6 @@
 -- @module graphics 
 
 require("input")
-local len_garbage = #garbage_bounce_table --length of lua garbage 
 
 --- upload image file and returns drawn image
 -- @function load_img
@@ -341,25 +340,6 @@ function graphics_init()
     end
 end
 
---- subscribe the method update_cards of Stack class for update the cards   
--- @function Stack.update_cards 
--- @param self object 
--- @return nil 
-function Stack.update_cards(self)
-    assert(self)
-    -- scrolls through all the cards and updates
-    for i = self.card_q.first,self.card_q.last do
-        local card = self.card_q[i]
-        card.frame = card.frame + 1
-
-        if card_animation[card.frame] then
-            if(card_animation[card.frame]==nil) then
-                self.card_q:pop()
-            end
-        end
-    end
-end
-
 --- subscribe the method draw_cards of Stack class for draw the cards  
 -- @function Stack.draw_cards 
 -- @param self object 
@@ -373,9 +353,10 @@ function Stack.draw_cards(self)
             local draw_y = (11-card.y) * 16 + self.pos_y + self.displacement
                             - card_animation[card.frame]
             draw(IMG_cards[card.chain][card.n], draw_x, draw_y)
+        else
+            --nothing to do
         end
     end
-
 end
 
 --- subscribe the method render of Stack class for render  
@@ -387,11 +368,13 @@ function Stack.render(self)
     
     local ceil = math.ceil --rounding -- T24
     local mouse_x, mouse_y -- coordinates of mouse
-
+    
     if config.debug_mode then
         mouse_x, mouse_y = love.mouse.getPosition()
         mouse_x = mouse_y / GFX_SCALE
         mouse_y = mouse_y / GFX_SCALE
+    else 
+        --nothing to do
     end
 
     if P1 == self then
@@ -405,7 +388,6 @@ function Stack.render(self)
 
     for row = 0, self.height do
         for col = 1, self.width do
-
             local panel = self.panels[row][col]
             local draw_x = (col-1) * 16 + self.pos_x
             local draw_y = (11-(row)) * 16 + self.pos_y + self.displacement - shake
@@ -415,6 +397,7 @@ function Stack.render(self)
 
                 if panel.garbage then
                     local imgs = {flash=IMG_metal_flash}
+                    
                     if not panel.metal then
                         imgs = IMG_garbage[self.garbage_target.character]
                     end
@@ -443,7 +426,7 @@ function Stack.render(self)
                                 end
                             end
 
-                            if height%2 == 1 then
+                            if height % 2 == 1 then
                                 draw(imgs.face, draw_x+8*(width-1), 
                                         top_y+16*((height-1)/2))
                             else
@@ -464,13 +447,11 @@ function Stack.render(self)
                     end
 
                     if panel.state == "matched" then
-
                         local flash_time = panel.initial_time - panel.timer
 
                         if flash_time >= self.FRAMECOUNT_FLASH then
-
                             if panel.timer > panel.pop_time then
-                                if panel.metal then
+                                if panel.metal or flash_time % 2 == 1 then
                                     draw(IMG_metal_l, draw_x, draw_y)
                                     draw(IMG_metal_r, draw_x+8, draw_y)
                                 else
@@ -481,13 +462,6 @@ function Stack.render(self)
                                 garbage_bounce_table[panel.timer] or 1], 
                                     draw_x, draw_y)
                             end
-                        elseif flash_time % 2 == 1 then
-                            if panel.metal then
-                                draw(IMG_metal_l, draw_x, draw_y)
-                                draw(IMG_metal_r, draw_x+8, draw_y)
-                            else
-                                draw(imgs.pop, draw_x, draw_y)
-                            end
                         else
                             draw(imgs.flash, draw_x, draw_y)
                         end
@@ -496,6 +470,9 @@ function Stack.render(self)
                     -- this adds the drawing of state flags to garbage panels 
                     if config.debug_mode then
                         gprint(panel.state, draw_x*3, draw_y*3)
+                        gprint(panel.chaining and "chaining" or "nah", 
+                                draw_x*3, draw_y*3+30)
+
                         if panel.match_anyway ~= nil then
                             gprint(tostring(panel.match_anyway), draw_x*3, 
                                     draw_y*3+10)
@@ -504,12 +481,13 @@ function Stack.render(self)
                                     draw_x*3, draw_y*3+20)
                             end
                         end
-                        gprint(panel.chaining and "chaining" or "nah", 
-                                draw_x*3, draw_y*3+30)
+                    else 
+                        -- nothing to do
                     end
                 else
                     if panel.state == "matched" then
                         local flash_time = self.FRAMECOUNT_MATCH - panel.timer
+
                         if flash_time >= self.FRAMECOUNT_FLASH then
                             draw_frame = 6
                         elseif flash_time % 2 == 1 then
@@ -522,18 +500,12 @@ function Stack.render(self)
                     elseif panel.state == "landing" then
                         draw_frame = bounce_table[panel.timer + 1]
                     elseif panel.state == "swapping" then
-
-                        if panel.is_swapping_from_left then
-                            draw_x = draw_x - panel.timer * 4
-                        else
-                            draw_x = draw_x + panel.timer * 4
-                        end
+                        draw_x = draw_x - panel.timer * 4
                     elseif panel.state == "dimmed" then
                         draw_frame = 7
                     elseif self.danger_col[col] then
-                        draw_frame = danger_bounce_table[
-                        wrap(1,self.danger_timer+1+floor((col-1)/2),
-                                #danger_bounce_table)]
+                        draw_frame = danger_bounce_table[wrap(1,self.danger_timer+1+floor((col-1)/2),
+                                                            #danger_bounce_table)]
                     else
                         draw_frame = 1
                     end
@@ -561,12 +533,14 @@ function Stack.render(self)
                 mouse_panel = {row, col, panel}
                 draw(IMG_panels[4][1], draw_x+16/3, draw_y+16/3, 0, 0.33333333,
                         0.3333333)
+            else
+                -- nothing to do
             end
         end
     end
 
-    IMG_frame = load_img("frame.png")
-    IMG_wall = load_img("wall.png")
+    local IMG_frame = load_img("frame.png")
+    local IMG_wall = load_img("wall.png")
 
     draw(IMG_frame, self.pos_x-4, self.pos_y-4)
     draw(IMG_wall, self.pos_x, self.pos_y - shake + self.height*16)
@@ -595,56 +569,48 @@ function Stack.render(self)
         gprint("Stop: "..self.stop_time, self.score_x, 205)
         gprint("Pre stop: "..self.pre_stop_time, self.score_x, 220)
 
-        if config.debug_mode and self.danger then
-            gprint("danger", self.score_x,235)
-        end
-
-        if config.debug_mode and self.danger_music then
-            gprint("danger music", self.score_x, 250)
-        end
-
         if config.debug_mode then
             gprint("cleared: "..(self.panels_cleared or 0), self.score_x, 265)
-        end
-
-        if config.debug_mode then
             gprint("metal q: "..(self.metal_panels_queued or 0), self.score_x, 280)
-        end
 
-        if config.debug_mode and self.input_state then
-            local iraise, iswap, iup, idown, ileft, iright = unpack(base64decode[self.input_state])
-            local inputs_to_print = "inputs:"
-
-            if iraise then
-                inputs_to_print = inputs_to_print.."\nraise"
-            end --◄▲▼►
-            if iswap then
-                inputs_to_print = inputs_to_print.."\nswap"
+            if self.danger then
+                gprint("danger", self.score_x,235)
+            end
+            
+            if self.danger_music then
+                gprint("danger music", self.score_x, 250)
             end
 
-            if iup then
-                inputs_to_print = inputs_to_print.."\nup"
-            end
+            if self.input_state then
+                local iraise, iswap, iup, idown, ileft, iright = unpack(base64decode[self.input_state])
+                local inputs_to_print = "inputs:"
 
-            if idown then
-                inputs_to_print = inputs_to_print.."\ndown"
+                if iraise then
+                    inputs_to_print = inputs_to_print.."\nraise"
+                elseif iswap then
+                    inputs_to_print = inputs_to_print.."\nswap"
+                elseif iup then
+                    inputs_to_print = inputs_to_print.."\nup"
+                elseif idown then
+                    inputs_to_print = inputs_to_print.."\ndown"
+                elseif ileft then
+                    inputs_to_print = inputs_to_print.."\nleft"
+                elseif iright then
+                    inputs_to_print = inputs_to_print.."\nright"
+                end
+            else
+                -- nothing to do
             end
-
-            if ileft then
-                inputs_to_print = inputs_to_print.."\nleft"
-            end
-
-            if iright then
-                inputs_to_print = inputs_to_print.."\nright"
-            end
-
-            gprint(inputs_to_print, self.score_x, 295)
+                gprint(inputs_to_print, self.score_x, 295)
         end
 
         if match_type then
             gprint(match_type, 375, 15)
+        else
+            -- nothing to do
         end
     end
+
     self:draw_cards()
     self:render_cursor()
 end
