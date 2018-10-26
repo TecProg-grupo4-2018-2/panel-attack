@@ -259,11 +259,17 @@ function select_speed_and_level_menu(next_func, ...)
     elseif MENU_KEY_DOWN(k) then
         active_idx = wrap(1, active_idx + 1, #menu_options)
     elseif MENU_KEY_RIGHT(k) then
-        if active_idx == 1 then speed = bound(1, speed + 1, 99)
-        elseif active_idx == 2 then difficulty = bound(1, difficulty + 1, 3) end
+        if active_idx == 1 then
+            speed = bound(1, speed + 1, 99)
+        elseif active_idx == 2 then
+            difficulty = bound(1, difficulty + 1, 3)
+        end
     elseif MENU_KEY_LEFT(k) then
-        if active_idx == 1 then speed = bound(1,speed-1,99)
-        elseif active_idx == 2 then difficulty = bound(1, difficulty - 1, 3) end
+        if active_idx == 1 then
+            speed = bound(1,speed-1,99)
+        elseif active_idx == 2 then
+            difficulty = bound(1, difficulty - 1, 3)
+        end
     elseif MENU_KEY_ENTER(k) then
         if active_idx == 3 then
             return menu_options[active_idx][2], {speed, difficulty, ...}
@@ -329,18 +335,18 @@ function main_time_attack(...)
     P1 = Stack(1, "time", ...)
 
     make_local_panels(P1, "000000")
-
+    local CLOCK_CONSTANT = 120 * 60
     while true do
         P1:render()
         coroutine_wait()
-        if P1.game_over or P1.CLOCK == 120 * 60 then
-      --  @todo proper game over.
+        if P1.game_over or P1.CLOCK == CLOCK_CONSTANT then
+            -- @todo proper game over.
             return main_dumb_transition, {main_select_mode, "You scored " .. P1.score}
         end
         
         run_function_as_60hz(function()
 
-        if (not P1.game_over) and P1.CLOCK < 120 * 60 then
+        if (not P1.game_over) and P1.CLOCK < CLOCK_CONSTANT then
             P1:local_run() end end)
     end
 end
@@ -401,75 +407,78 @@ function main_character_select()
             end
         end
 
-    -- runs if connection has failed
-    if not global_initialize_room_msg then
-        return main_dumb_transition, {main_select_mode, "Failed to connect.\n\nReturning to main menu", 60, 300}
-    end
+        -- runs if connection has failed
+        if not global_initialize_room_msg then
+            return main_dumb_transition, {main_select_mode, "Failed to connect.\n\nReturning to main menu", 60, 300}
+        end
 
-    message = global_initialize_room_msg
-    global_initialize_room_msg = nil
-    if message.ratings then
-        global_current_room_ratings = message.ratings
-    end
+        message = global_initialize_room_msg
+        global_initialize_room_msg = nil
+        if message.ratings then
+            global_current_room_ratings = message.ratings
+        end
 
-    global_my_state = message.a_menu_state
-    global_op_state = message.b_menu_state
+        global_my_state = message.a_menu_state
+        global_op_state = message.b_menu_state
 
-    if message.your_player_number then
-        my_player_number = message.your_player_number
-    elseif currently_spectating then
-        my_player_number = 1
-    elseif my_player_number and my_player_number ~= 0 then
-        print("We assumed our player number is still " .. my_player_number)
-    else
-        error("We never heard from the server as to what player number we are")
-        print("Error: The server never told us our player number.  Assuming it is 1")
-        my_player_number = 1
-    end
+        
+        if message.your_player_number then
+            my_player_number = message.your_player_number
+        elseif currently_spectating then
+            my_player_number = 1
+        -- Thats right its checking if is nil and different of zero
+        elseif my_player_number and my_player_number ~= 0 then
+            print("We assumed our player number is still " .. my_player_number)
+        else
+            error("We never heard from the server as to what player number we are")
+            print("Error: The server never told us our player number.  Assuming it is 1")
+            my_player_number = 1
+        end
 
-    if message.op_player_number then
-        op_player_number = message.op_player_number or op_player_number
-    elseif currently_spectating then
-        op_player_number = 2
-    elseif op_player_number and op_player_number ~= 0 then
-        print("We assumed op player number is still " .. op_player_number)
-    else
-        error("We never heard from the server as to what player number we are")
-        print("Error: The server never told us our player number.  Assuming it is 2")
-        op_player_number = 2
-    end
+        if message.op_player_number then
+            op_player_number = message.op_player_number or op_player_number
+        elseif currently_spectating then
+            op_player_number = 2
+        -- Thats right its checking if is nil and different of zero
+        elseif op_player_number and op_player_number ~= 0 then
+            print("We assumed op player number is still " .. op_player_number)
+        else
+            error("We never heard from the server as to what player number we are")
+            print("Error: The server never told us our player number.  Assuming it is 2")
+            op_player_number = 2
+        end
 
-    if message.win_counts then
-        update_win_counts(message.win_counts)
-    end
-    if message.replay_of_match_so_far then
-        replay_of_match_so_far = message.replay_of_match_so_far
-    end
+        if message.win_counts then
+            update_win_counts(message.win_counts)
+        end
+        if message.replay_of_match_so_far then
+            replay_of_match_so_far = message.replay_of_match_so_far
+        end
 
-    if message.ranked then
-        matchType = "Ranked"
-        match_type_message = ""
-    else 
-        matchType = "Casual"
-    end
+        if message.ranked then
+            matchType = "Ranked"
+            match_type_message = ""
+        else 
+            matchType = "Casual"
+        end
 
-    if currently_spectating then
-        P1 = {panel_buffer="", gpanel_buffer=""}
-        print("we reset P1 buffers at start of main_character_select()")
-    end
-    P2 = {
-        panel_buffer="",
-        gpanel_buffer=""
-        }
-      print("we reset P2 buffers at start of main_character_select()")
-      print("serverSupportsRanking: "..tostring(serverSupportsRanking))
+        if currently_spectating then
+            P1 = {panel_buffer="", gpanel_buffer=""}
+            print("we reset P1 buffers at start of main_character_select()")
+        end
+        P2 = {
+            panel_buffer="",
+            gpanel_buffer=""
+            }
+        print("we reset P2 buffers at start of main_character_select()")
+        print("serverSupportsRanking: "..tostring(serverSupportsRanking))
 
-    local cursor,op_cursor, coordinate_x, coordinate_y = nil, nil, nil
-    -- If serverSupportsRanking is true then update map, else update update map
-    if serverSupportsRanking then
-        map = MAP_RANKING
-    else
-        map = MAP_DEFAULT
+        local cursor,op_cursor, coordinate_x, coordinate_y = nil, nil, nil
+        -- If serverSupportsRanking is true then update map, else update update map
+        if serverSupportsRanking then
+            map = MAP_RANKING
+        else
+            map = MAP_DEFAULT
         end
     end
 
@@ -497,17 +506,19 @@ function main_character_select()
         global_current_room_ratings = global_current_room_ratings or 
             {{new=0, old=0, difference=0}, {new=0, old=0, difference=0}}
 
-        my_expected_win_ratio = (100*round(1/(1+10^
-                ((global_current_room_ratings[op_player_number].new
-                    -global_current_room_ratings[my_player_number].new)
-                /rating_spread_modifier))
-                ,2))
+        -- Win ratio of the current player
+        my_expected_win_ratio = (global_current_room_ratings[op_player_number].new
+            -global_current_room_ratings[my_player_number].new)
+            /rating_spread_modifier
 
-        op_expected_win_ratio = (100*round(1/(1+10^
-                ((global_current_room_ratings[my_player_number].new
-                    -global_current_room_ratings[op_player_number].new)
-                /rating_spread_modifier))
-                ,2))
+        my_expected_win_ratio = 100 * round(1/1 + 10^my_expected_win_ratio, 2)
+
+        -- Win ratio of the oponent player
+        op_expected_win_ratio = (global_current_room_ratings[my_player_number].new
+            -global_current_room_ratings[op_player_number].new)
+            /rating_spread_modifier
+
+        op_expected_win_ratio = 100 * round(1/1 + 10^op_expected_win_ratio, 2)
     end
 
     if character_select_mode == "2p_net_vs" then
@@ -589,8 +600,9 @@ function main_character_select()
         grectangle("line", render_x, render_y, button_width, button_height)
 
         -- If character icon is a instance then get the dimensions and draw in screen
-        if IMG_character_icons[character_display_names_to_original_names[str]] then
-            local orig_w, orig_h = IMG_character_icons[character_display_names_to_original_names[str]]:getDimensions()
+        local icon = IMG_character_icons[character_display_names_to_original_names[str]]
+        if icon then
+            local orig_w, orig_h = icon:getDimensions()
             menu_draw(IMG_character_icons[character_display_names_to_original_names[str]],
             render_x, render_y, 0, button_width/orig_w, button_height/orig_h )
         end
@@ -669,12 +681,18 @@ function main_character_select()
                 local cursor_scale = (button_height + (spacing * 2)) / cur_img_h
 
                 menu_drawq(cur_img, cur_img_left, render_x - spacing, render_y-spacing, 0, cursor_scale , cursor_scale)
-                menu_drawq(cur_img, cur_img_right,
-                render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
-                render_y - spacing, 0, cursor_scale, cursor_scale)
+                menu_drawq(
+                    cur_img,
+                    cur_img_right,
+                    render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
+                    render_y - spacing,
+                    0,
+                    cursor_scale,
+                    cursor_scale
+                    )
             end
         end
-
+        -- Draw player 1
         if my_state and my_state.cursor and
         (my_state.cursor == str or my_state.cursor == character_display_names_to_original_names[str]) then
             player_num = 1
@@ -698,10 +716,24 @@ function main_character_select()
             cur_img_right = IMG_char_sel_cursor_halves.right[player_num][cursor_frame]
             local cur_img_w, cur_img_h = cur_img:getDimensions()
             local cursor_scale = (button_height + (spacing * 2)) / cur_img_h
-            menu_drawq(cur_img, cur_img_left, render_x-spacing, render_y-spacing, 0, cursor_scale , cursor_scale)
-            menu_drawq(cur_img, cur_img_right,
-            render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
-            render_y - spacing, 0, cursor_scale, cursor_scale)
+            menu_drawq(
+                cur_img,
+                cur_img_left,
+                render_x-spacing,
+                render_y-spacing,
+                0,
+                cursor_scale,
+                cursor_scale
+                )
+            menu_drawq(
+                cur_img,
+                cur_img_right,
+                render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
+                render_y - spacing,
+                0,
+                cursor_scale,
+                cursor_scale
+                )
         end
         end
         gprint(pstr, render_x + 6, render_y + y_add)
@@ -954,6 +986,7 @@ function main_character_select()
         end
 
         coroutine_wait()
+        -- Spectation isn't us
         if not currently_spectating then
             if MENU_KEY_UP(k) then
                 if not selected then move_cursor(up) end
@@ -1012,7 +1045,7 @@ function main_character_select()
             end
             
             prev_state = my_state
-        else -- (we are are spectating)
+        else -- (we are spectating)
             if MENU_KEY_ESCAPE(k) then
                 do_leave()
                 return main_net_vs_lobby
@@ -1088,7 +1121,7 @@ function main_net_vs_lobby()
                         login_status_message = "Welcome, new user: "..my_name
                     elseif message.name_changed then
                         login_status_message = "Welcome, your username has been updated. \n\nOld name:  \""
-                        .. message.old_name .. "\"\n\nNew name:  \"" .. message.new_name .. "\""
+                            .. message.old_name .. "\"\n\nNew name:  \"" .. message.new_name .. "\""
                         login_status_message_duration = 5
                     else
                         login_status_message = "Welcome back, " .. my_name
@@ -1111,9 +1144,16 @@ function main_net_vs_lobby()
         
         for _, message in ipairs(this_frame_messages) do
             if message.choose_another_name and message.choose_another_name.used_names then
-                return main_dumb_transition, {main_select_mode, "Error: name is taken :<\n\nIf you had just left the server,\nit may not have realized it yet, try joining again.\n\nThis can also happen if you have two\ninstances of Panel Attack open.\n\nPress Swap or Back to continue.", 60, 600}
+                return main_dumb_transition, {main_select_mode, 
+                    "Error: name is taken :<\n\nIf you had just left the server,\nit may not have realized it yet, try joining again.\n\nThis can also happen if you have two\ninstances of Panel Attack open.\n\nPress Swap or Back to continue.",
+                    60, 
+                    600
+                    }
             elseif message.choose_another_name and message.choose_another_name.reason then
-                return main_dumb_transition, {main_select_mode, "Error: ".. message.choose_another_name.reason, 60}
+                return main_dumb_transition, {main_select_mode,
+                        "Error: ".. message.choose_another_name.reason,
+                        60
+                        }
         end
         
         if message.create_room or message.spectate_request_granted then
@@ -1205,7 +1245,11 @@ function main_net_vs_lobby()
                 to_print = to_print .. "   " .. menu_options[i] ..
                     (willing_players[menu_options[i]] and " (Wants to play with you :o)" or "") .. "\n"
             elseif i < #menu_options - 1 and menu_options[i].name then
-                to_print = to_print .. "   spectate " .. menu_options[i].name .. " (".. menu_options[i].state .. ")\n" --printing room names 
+                to_print = to_print .. --printing room names
+                    "   spectate " .. 
+                    menu_options[i].name .. 
+                    " (".. menu_options[i].state .. 
+                    ")\n"
             elseif i < #menu_options then
                 to_print = to_print .. "   " .. menu_options[i] .. "\n"
             else
@@ -1227,8 +1271,11 @@ function main_net_vs_lobby()
                 if leaderboard_first_idx_to_show>1 then
                     leaderboard_first_idx_to_show = leaderboard_first_idx_to_show - 1
                     leaderboard_last_idx_to_show = leaderboard_last_idx_to_show - 1    
-                    leaderboard_string = build_viewable_leaderboard_string(leaderboard_report, 
-                                    leaderboard_first_idx_to_show, leaderboard_last_idx_to_show)
+                    leaderboard_string = build_viewable_leaderboard_string(
+                            leaderboard_report, 
+                            leaderboard_first_idx_to_show,
+                            leaderboard_last_idx_to_show
+                            )
                 end
             else
                 active_idx = wrap(1, active_idx-1, #menu_options)
@@ -2220,7 +2267,7 @@ function main_options()
             adjust_backwards = true
             adjust_active_value = true
           end
-      --the following is enough for "bool"
+          --the following is enough for "bool"
           adjust_active_value = true
           if menu_options[active_idx][6] and not menu_options[active_idx][9] then
             --sound_source for this menu item exists and not play_while_selected
@@ -2294,7 +2341,7 @@ function main_options()
                     CONFIG_TABLE.debug_mode = not CONFIG_TABLE.debug_mode
                     menu_options[active_idx][2] = debug_mode_text[CONFIG_TABLE.debug_mode or false]
                   end
-              --add any other bool config updates here
+            --add any other bool config updates here
             elseif menu_options[active_idx][3] == "numeric" then
                   if CONFIG_TABLE.master_volume ~= menu_options[1][2] then
                     CONFIG_TABLE.master_volume = menu_options[1][2]
@@ -2314,7 +2361,7 @@ function main_options()
                   if active_idx == 3 and deselected_this_frame then --Music Volume
                     set_volume(sounds.music, CONFIG_TABLE.music_volume / 100) 
                   end
-          --add any other numeric config updates here
+            --add any other numeric config updates here
             elseif menu_options[active_idx][3] == "multiple choice" then
                   local active_choice_num = 1
                   --find the key for the currently selected choice
