@@ -5,42 +5,46 @@
   --    (rising, timers, falling, cursor movement, swapping, landing)
   --  . the matches-checking routine
   
-  local min, pairs, deepcpy = math.min, pairs, deepcpy
-  local max = math.max
-  local garbage_bounce_time = #garbage_bounce_table
-  local GARBAGE_DELAY = 52
-  local clone_pool = {}
-  
+local min, pairs, deepcpy = math.min, pairs, deepcpy
+local max = math.max
+local garbage_bounce_time = #garbage_bounce_table
+local GARBAGE_DELAY = 52
+local clone_pool = {}
+
   -- Stack of panels
-  Stack = class(function(self, which, mode, speed, difficulty, player_number)
+Stack = class(function(self, which, mode, speed, difficulty, player_number)
 	assert(which, "Which param nil") 
 	assert(mode, "Mode must exists") 
-	
 	self.character = uniformly(characters)
 	assert(self.character, "There are no characters")
 	self.max_health = 1
 	self.mode = mode or "endless"
 	assert(self.mode, "Game mode is not selected") 
+
 	if mode ~= "puzzle" then
 		self.do_first_row = true
+	else
+		-- nothing to do --t23
 	end
+
 	if self.mode == "endless" then
 		self.NCOLORS = difficulty_to_ncolors_endless[difficulty]
 		assert(self.NCOLORS, "NCOLORS can't be nil") 
-	end
-	if self.mode == "time" then
+	elseif self.mode == "time" then  --t21
 		self.NCOLORS = difficulty_to_ncolors_1Ptime[difficulty]
 		assert(self.NCOLORS, "NCOLORS can't be nil") 
-	end
-	
-	if self.mode == "2ptime" or self.mode == "vs" then
+	elseif self.mode == "2ptime" or self.mode == "vs" then --t21
 		local level = speed or 5
 		assert(level, "Level can't be nil") 
 		self.character = (type(difficulty) == "string") and difficulty or self.character
 		self.level = level
 		speed = level_to_starting_speed[level]
 		-- difficulty = level_to_difficulty[level]
-		self.speed_times = {15*60, idx=1, delta=15*60}
+		self.speed_times = {
+			15*60,
+			idx=1,
+			delta=15*60
+		} --t01
 		self.max_health = assert(level_to_hang_time[level], "max_health can't be nil") 
 		self.FRAMECOUNT_HOVER  = assert(level_to_hover[self.level], "FRAMECOUNT_HOVER can't be nil") 
 		self.FRAMECOUNT_FLASH  = assert(level_to_flash[self.level],  "FRAMECOUNT_FLASH can't be nil") 
@@ -55,16 +59,20 @@
 		else
 			self.NCOLORS = level_to_ncolors_vs[level]
 		end
-		assert(self.NCOLORS, "NCOLORS can't be nil") 		
+		assert(self.NCOLORS, "NCOLORS can't be nil")
+	else
+		-- nothing to do --t23
 	end
 	self.health = self.max_health
 	
-	self.garbage_cols = {{1,2,3,4,5,6,idx=1},
-	{1,3,5,idx=1},
-	{1,4,idx=1},
-	{1,2,3,idx=1},
-	{1,2,idx=1},
-	{1,idx=1}}
+	self.garbage_cols = {
+		{1,2,3,4,5,6,idx=1},
+		{1,3,5,idx=1},
+		{1,4,idx=1},
+		{1,2,3,idx=1},
+		{1,2,idx=1},
+		{1,idx=1}
+	} --t01
 	self.later_garbage = {}
 	self.garbage_q = Queue()
 	-- garbage_to_send[frame] is an array of garbage to send at frame.
@@ -109,7 +117,10 @@
 	-- the stack takes to rise automatically
 	if self.speed_times == nil then
 		self.panels_to_speedup = panels_to_next_speed[self.speed]
+	else
+		-- nothing to do --t23
 	end
+
 	self.rise_timer = 1 -- When this value reaches 0, the stack will rise a pixel
 	self.rise_lock = false -- If the stack is rise locked, it won't rise until it is
 	-- unlocked.
@@ -183,6 +194,8 @@ function Stack.mkcpy(self, other)
 			other = clone_pool[#clone_pool]
 			clone_pool[#clone_pool] = nil
 		end
+	else
+		-- nothing to do --t23
 	end
 	other.do_swap = self.do_swap
 	other.speed = self.speed
@@ -207,13 +220,17 @@ function Stack.mkcpy(self, other)
 	local height_to_cpy = #self.panels
 	assert(height_to_cpy >= 0) 
 	other.panels = other.panels or {}
+
 	for i=1,height_to_cpy do
 		if other.panels[i] == nil then
 			other.panels[i] = {}
 			for j=1,width do
 				other.panels[i][j] = Panel()
 			end
+		else
+			-- nothing to do -- t23
 		end
+
 		for j=1,width do
 			local opanel = other.panels[i][j]
 			local spanel = self.panels[i][j]
@@ -223,11 +240,13 @@ function Stack.mkcpy(self, other)
 			end
 		end
 	end
+
 	for i=height_to_cpy+1,#other.panels do
 		for j=1,width do
 			other.panels[i][j]:clear()
 		end
 	end
+
 	other.CLOCK = self.CLOCK
 	other.displacement = self.displacement
 	other.speed_times = deepcpy(self.speed_times)
@@ -279,82 +298,119 @@ function Panel.clear(self)
 		-- The timer is also used to offset the panel's
 		-- position on the screen.
 		
-		self.initial_time = nil
-		self.pop_time = nil
-		self.pop_index = nil
-		self.x_offset = nil
-		self.y_offset = nil
-		self.width = nil
-		self.height = nil
-		self.garbage = nil
-		self.metal = nil
-		
-		-- Also flags
-		self:clear_flags()
+	self.initial_time = nil
+	self.pop_time = nil
+	self.pop_index = nil
+	self.x_offset = nil
+	self.y_offset = nil
+	self.width = nil
+	self.height = nil
+	self.garbage = nil
+	self.metal = nil
+	
+	-- Also flags
+	self:clear_flags()
+end
+	
+-- states:
+-- swapping, matched, popping, popped, hovering,
+-- falling, dimmed, landing, normal
+-- flags:
+-- from_left
+-- dont_swap
+-- chaining
+
+-- do TODO is it really necessary?
+local exclude_hover_set = { --t01
+	matched=true,
+	popping=true,
+	popped=true,
+	hovering=true,
+	falling=true
+}
+
+function Panel.exclude_hover(self)
+	return exclude_hover_set[self.state] or self.garbage
+end
+
+local exclude_match_set = { --t01
+	swapping=true,
+	matched=true,
+	popping=true,
+	popped=true,
+	dimmed=true,
+	falling=true
+}
+function Panel.exclude_match(self)
+	if(exclude_match_set[self.state]) then --t21 --t22
+		return exclude_match_set[self.state]
+	elseif (self.color == 0) or (self.color == 9) then
+		return self.color
+	elseif (self.state == "hovering" and not self.match_anyway) then
+		return (self.state == "hovering" and not self.match_anyway)
+	else
+		-- nothing to do --t23
 	end
-	
-	-- states:
-	-- swapping, matched, popping, popped, hovering,
-	-- falling, dimmed, landing, normal
-	-- flags:
-	-- from_left
-	-- dont_swap
-	-- chaining
-	
-	do
-		local exclude_hover_set = {matched=true, popping=true, popped=true,
-		hovering=true, falling=true}
-		function Panel.exclude_hover(self)
-			return exclude_hover_set[self.state] or self.garbage
-		end
-		
-		local exclude_match_set = {swapping=true, matched=true, popping=true,
-		popped=true, dimmed=true, falling=true}
-		function Panel.exclude_match(self)
-			return exclude_match_set[self.state] or self.color == 0 or self.color == 9
-			or (self.state == "hovering" and not self.match_anyway)
-		end
-		
-		local exclude_swap_set = {matched=true, popping=true, popped=true,
-		hovering=true, dimmed=true}
-		function Panel.exclude_swap(self)
-			return exclude_swap_set[self.state] or self.dont_swap or self.garbage
-		end
-		
-		function Panel.support_garbage(self)
-			return self.color ~= 0 or self.hovering
-		end
-		
-		-- "Block garbage fall" means
-		-- "falling-ness should not propogate up through this panel"
-		-- We need this because garbage doesn't hover, it just falls
-		-- opportunistically.
-		local block_garbage_fall_set = {matched=true, popping=true,
-		popped=true, hovering=true, swapping=true}
-		function Panel.block_garbage_fall(self)
-			return block_garbage_fall_set[self.state] or self.color == 0
-		end
-		
-		function Panel.dangerous(self)
-			return self.color ~= 0 and (self.state ~= "falling" or not self.garbage)
-		end
+end
+
+local exclude_swap_set = {
+	matched=true,
+	popping=true,
+	popped=true,
+	hovering=true,
+	dimmed=true
+} --t01
+
+function Panel.exclude_swap(self)
+	if (exclude_swap_set[self.state]) then --t21 --t22
+		return exclude_swap_set[self.state]
+	elseif (self.dont_swap) then
+		return self.dont_swap
+	else
+		return self.garbage
 	end
-	
-	function Panel.has_flags(self)
-		return self.state ~= "normal" or self.is_swapping_from_left
-		or self.dont_swap or self.chaining
-	end
-	
-	function Panel.clear_flags(self)
-		self.combo_index = nil
-		self.combo_size = nil
-		self.chain_index = nil
-		self.is_swapping_from_left = nil
-		self.dont_swap = nil
-		self.chaining = nil
-		self.state = "normal"
-	end
-	
+end
+
+function Panel.support_garbage(self)
+	return self.color ~= 0 or self.hovering
+end
+
+-- "Block garbage fall" means
+-- "falling-ness should not propogate up through this panel"
+-- We need this because garbage doesn't hover, it just falls
+-- opportunistically.
+local block_garbage_fall_set = { --t01
+	matched=true,
+	popping=true,
+	popped=true,
+	hovering=true,
+	swapping=true
+}
+
+function Panel.block_garbage_fall(self)
+	return block_garbage_fall_set[self.state] or self.color == 0
+end
+
+function Panel.dangerous(self)
+	return self.color ~= 0 and (self.state ~= "falling" or not self.garbage)
+end
+-- end
+
+function Panel.has_flags(self)
+	return self.state ~= "normal" or self.is_swapping_from_left
+			or self.dont_swap or self.chaining
+end
+
+function Panel.clear_flags(self)
+	self.combo_index = nil
+	self.combo_size = nil
+	self.chain_index = nil
+	self.is_swapping_from_left = nil
+	self.dont_swap = nil
+	self.chaining = nil
+	self.state = "normal"
+end
+
 	function Stack.set_puzzle_state(self, pstr, n_turns)
 		-- Copy the puzzle into our state
 		local sz = self.width * self.height
@@ -381,6 +437,8 @@ function Panel.clear(self)
 				local color = panels[row][col].color
 				if color ~= 0 and color ~= 9 then
 					return false
+				else
+					-- nothing to do --t23
 				end
 			end
 		end
@@ -393,6 +451,8 @@ function Panel.clear(self)
 			for j=1,self.width do
 				if prow and prow[j].garbage and prow[j].state == "falling" then
 					return true
+				else
+					-- nothing to do --t23
 				end
 			end
 		end
@@ -412,6 +472,8 @@ function Panel.clear(self)
 			prev_states[self.CLOCK-400] = nil
 			self.prev_states = assert(prev_states)
 			self.garbage_target = garbage_target
+		else
+			-- nothing to do --t23
 		end
 	end
 	
@@ -422,6 +484,8 @@ function Panel.clear(self)
 				self:new_row()
 				self.cur_row = assert(self.cur_row-1) 
 			end
+		else
+			-- nothing to do
 		end
 		stop_character_sounds(self.character)
 	end
