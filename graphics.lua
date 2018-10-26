@@ -11,7 +11,6 @@ local len_garbage = #garbage_bounce_table --length of lua garbage -- T24
 -- @function load_img
 -- @param image_path image archive
 -- @return draw_image drawing image
-
 function load_img(image_path)
     local img -- T24
     assert(image_path)  
@@ -55,15 +54,14 @@ function draw(img, x, y, rot, x_scale, y_scale)
     x_scale = x_scale or 1
     y_scale = y_scale or 1
 
-    gfx_q:push({love.graphics.draw,
-    {
+    gfx_q:push({love.graphics.draw,{
         img,
         x*GFX_SCALE,
         y*GFX_SCALE,
         rot,
         x_scale*GFX_SCALE,
         y_scale*GFX_SCALE
-    }
+     }
     })
 end
 
@@ -220,17 +218,17 @@ local floor = math.floor
 function graphics_init()
     IMG_panels = {}
 
-    for i=1,8 do
+    for i = 1,8 do
         IMG_panels[i]={}
-        for j=1,7 do
+        for j = 1,7 do
             IMG_panels[i][j]=load_img("panel"..tostring(i)..tostring(j)..".png")
         end
     end
 
     IMG_panels[9]={}
 
-    for j=1,7 do
-        IMG_panels[9][j]=load_img("panel00.png")
+    for j = 1,7 do
+        IMG_panels[9][j] = load_img("panel00.png")
     end
 
     local g_parts = {
@@ -242,16 +240,13 @@ function graphics_init()
 
     IMG_garbage = {}
 
-    for _,key in ipairs(characters) do
-
+    for _, key in ipairs(characters) do
         local imgs = {}
-
         IMG_garbage[key] = imgs
 
-        for _,part in ipairs(g_parts) do
+        for _, part in ipairs(g_parts) do
             imgs[part] = load_img(""..key.."/"..part..".png")
         end
-
     end
 
     IMG_metal_flash = load_img("garbageflash.png")
@@ -259,10 +254,6 @@ function graphics_init()
     IMG_metal_l = load_img("metalend0.png")
     IMG_metal_r = load_img("metalend1.png")
 
-    IMG_cursor = {
-        load_img("cur0.png"),
-        load_img("cur1.png")
-    }
 
     IMG_frame = load_img("frame.png")
     IMG_wall = load_img("wall.png")
@@ -271,43 +262,43 @@ function graphics_init()
     IMG_cards[true] = {}
     IMG_cards[false] = {}
 
-    for i=4,66 do
+    for i = 4, 66 do
         IMG_cards[false][i] = load_img("combo"..tostring(floor(i/10))..
                                         tostring(i%10)..".png")
     end
 
-    for i=2,13 do
+    for i = 2, 13 do
         IMG_cards[true][i] = load_img("chain"..tostring(floor(i/10))..
                                         tostring(i%10)..".png")
     end
 
-    for i=14,99 do
+    for i = 14, 99 do
         IMG_cards[true][i] = load_img("chain00.png")
     end
 
     IMG_character_icons = {}
 
-    for k,name in ipairs(characters) do
+    for k, name in ipairs(characters) do
         IMG_character_icons[name] = load_img(""..name.."/icon.png")
     end
 
-    local MAX_SUPPORTED_PLAYERS = 2
+    MAX_SUPPORTED_PLAYERS = 2
     IMG_char_sel_cursors = {}
 
-    for player_num=1,MAX_SUPPORTED_PLAYERS do
+    for player_num = 1, MAX_SUPPORTED_PLAYERS do
         IMG_char_sel_cursors[player_num] = {}
-        for position_num=1,2 do
+        for position_num = 1, 2 do
             IMG_char_sel_cursors[player_num][position_num] = load_img(
                 "char_sel_cur_"..player_num.."P_pos"..position_num..".png")
         end
     end
 
     IMG_char_sel_cursor_halves = {left={}, right={}}
-    for player_num=1,MAX_SUPPORTED_PLAYERS do
 
+    for player_num= 1, MAX_SUPPORTED_PLAYERS do
         IMG_char_sel_cursor_halves.left[player_num] = {}
 
-        for position_num=1,2 do
+        for position_num= 1, 2 do
             local cur_width, cur_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
             local half_width, half_height = cur_width/2, cur_height/2
             IMG_char_sel_cursor_halves["left"][player_num][position_num] =
@@ -317,7 +308,7 @@ function graphics_init()
 
         IMG_char_sel_cursor_halves.right[player_num] = {}
 
-        for position_num=1,2 do
+        for position_num= 1, 2 do
             local cur_width, cur_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
             local half_width, half_height = cur_width/2, cur_height/2
             IMG_char_sel_cursor_halves.right[player_num][position_num] = 
@@ -343,13 +334,13 @@ function graphics_init()
 
     print("character_display_names: ")
 
-    for k,v in pairs(character_display_names) do
+    for k, v in pairs(character_display_names) do
         print(k.." = "..v)
     end
 
     character_display_names_to_original_names = {}
 
-    for k,v in pairs(character_display_names) do
+    for k, v in pairs(character_display_names) do
         character_display_names_to_original_names[v] = k
     end
 end
@@ -364,6 +355,7 @@ function Stack.update_cards(self)
     for i = self.card_q.first,self.card_q.last do
         local card = self.card_q[i]
         card.frame = card.frame + 1
+
         if card_animation[card.frame] then
             if(card_animation[card.frame]==nil) then
                 self.card_q:pop()
@@ -667,12 +659,15 @@ function scale_letterbox(width, height, w_ratio, h_ratio)
     assert(width > 0, "width can't be negative or zero")
     assert(height > 0, "height can't be negative or zero")
 
-    if height / h_ratio > width / w_ratio then
-        local scaled_height = h_ratio * width / w_ratio
+    local height_ratio = height / h_ratio
+    local width_ratio = width / w_ratio 
+
+    if height_ratio > width_ratio then
+        local scaled_height = h_ratio * width_ratio
         return 0, (height - scaled_height) / 2, width, scaled_height
     end
 
-    local scaled_width = w_ratio * height / h_ratio
+    local scaled_width = w_ratio * height_ratio
 
     return assert((width - scaled_width) / 2, 0, scaled_width, height) 
 end
@@ -682,11 +677,17 @@ end
 -- @param self object 
 -- @return nil 
 function Stack.render_cursor(self)
+    local index = (floor(self.CLOCK/16)%2)+1 
     local x = self.pos_x - 4
     local y = self.pos_y - 4
-    local col = (self.cur_col - 1) * 16
-    local row = (11 - self.cur_row) * 16
-    draw(IMG_cursor[(floor(self.CLOCK/16)%2)+1], col+x,
-            row+y+self.displacement)
+    local col = (self.cur_col - 1) * 16 
+    local row = (11 - self.cur_row) * 16 
+    
+    local IMG_cursor = {
+        load_img("cur0.png"),
+        load_img("cur1.png")
+    }
+
+    draw(IMG_cursor[index], col+x, row+y+self.displacement)
 end
 
