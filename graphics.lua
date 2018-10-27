@@ -322,6 +322,8 @@ function graphics_init()
         local open_success, err = name_txt_file:open("r")
         local display_name = name_txt_file:read(name_txt_file:getSize())
 
+        name_txt_file:close()
+
         if display_name then
             character_display_names[original_name] = display_name
         else
@@ -366,7 +368,7 @@ end
 function Stack.render(self)
     assert(self)
     
-    local ceil = math.ceil --rounding -- T24
+    local ceil = math.ceil --rounding 
     local mouse_x, mouse_y -- coordinates of mouse
     
     if config.debug_mode then
@@ -500,7 +502,11 @@ function Stack.render(self)
                     elseif panel.state == "landing" then
                         draw_frame = bounce_table[panel.timer + 1]
                     elseif panel.state == "swapping" then
-                        draw_x = draw_x - panel.timer * 4
+                        if panel.is_swapping_from_left then
+                            draw_x = draw_x - panel.timer * 4
+                        else
+                            draw_x = draw_x + panel.timer * 4
+                        end
                     elseif panel.state == "dimmed" then
                         draw_frame = 7
                     elseif self.danger_col[col] then
