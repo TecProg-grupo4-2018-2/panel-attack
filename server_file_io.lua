@@ -4,17 +4,11 @@
 -- @module server_file_io 
 ------
 
-local lfs = require('lfs')
-
 --- Check if is really a file
 -- @function check_is_file
 -- @param name string with name of the file
 -- return boolean, true if is a file, else if not.
 function check_is_file(name) 
-    if type(name)~='string' then 
-        return false 
-    end
-
     if not check_is_dir(name) then
         return assert(os.rename(name,name)) 
         -- note that the short evaluation is to
@@ -34,7 +28,6 @@ function check_is_file_dir(name)
     else
         return assert((os.rename(name, name)))  
     end
-
 end
 
 --- Check if is a directory (most accurately than check_is_file)
@@ -44,14 +37,15 @@ end
 function check_is_dir(name) 
     if type(name)~='string' then 
         return false 
+    else
+        local lfs = require('lfs')
+        local current_dir = lfs.currentdir() 
+        local is_dir = lfs.chdir(name)  
+
+        lfs.chdir(current_dir)
+
+        return assert(is_dir) 
     end
-
-    local current_dir = lfs.currentdir() 
-    local is_dir = lfs.chdir(name)  
-
-    lfs.chdir(current_dir)
-
-    return assert(is_dir) 
 end
 
 --- Create a directory using path
@@ -158,6 +152,7 @@ end
 function read_leaderboard_file() 
     local function read_file()
         local file = assert(io.open('leaderboard.txt', 'r')) 
+
         assert(io.input(file), "input is invalid") 
         leaderboard.players = json.decode(io.read('*all'))
         io.close(file)
@@ -180,6 +175,7 @@ function write_replay_file(replay, path, filename)
     local function write_file()
         make_dir(path)
         local file = assert(io.open(path..'/'..filename, 'w')) 
+
         io.output(file)
         io.write(json.encode(replay))
         io.close(file)
@@ -202,7 +198,9 @@ function read_csprng_seed_file()
         else
             print('csprng_seed.txt could not be read.  Writing a new ' .. 
                 'default (2000) csprng_seed.txt')
+
             local new_file = assert(io.open('csprng_seed.txt', 'w')) 
+
             io.output(new_file)
             io.write('2000')
             io.close(new_file)
@@ -211,14 +209,15 @@ function read_csprng_seed_file()
 
         if tonumber(csprng_seed) then
             local temporary = assert(tonumber(csprng_seed)) 
+
             csprng_seed = temporary
         else 
-            print('ERROR: csprng_seed.txt content is not numeric. ' ..  
+            print('ERROR: csprng_seed.txt content is not numeric. ' .. 
                 'Using default (2000) as csprng_seed')
+
             csprng_seed = 2000
         end
     end 
 
     pcall(read_file)
 end
-
