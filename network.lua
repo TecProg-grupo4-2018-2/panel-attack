@@ -246,7 +246,7 @@ function network_init(ip)
         error('Failed to setup the socket')
     else
         -- this timeout is duplicated
-        TCP_sock:settimeout(0)
+        TCP_sock:settimeout(6)
         got_H = false
         send_net('H'..VERSION)
 
