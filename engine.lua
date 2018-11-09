@@ -787,9 +787,8 @@ function Stack.PdP(self)
 								panels[row-1][x]:clear()
 								propogate_fall[x] = true
 								panels[row][x].state = "falling"
-								panels[row-1][x], panels[row][x] =
-								panels[row][x], panels[row-1][x]
-							end  AQUI
+								panels[row-1][x], panels[row][x] = panels[row][x], panels[row-1][x]
+							end  
 						end
 					end
 
