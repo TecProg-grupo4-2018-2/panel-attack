@@ -3,6 +3,7 @@
 --- Handle sockets and connection of the game.
 -- @module network
 
+local log = require("log")
 
 --- TCP socket
 local TCP_sock = nil
@@ -27,6 +28,31 @@ function flush_socket()
 
     --- save data in leftovers
     leftovers = leftovers .. data
+
+end
+
+--- Config socket (set timeout, ip, port)
+-- @function network_init
+-- @param ip init interface with this ip
+-- @return nil
+-- @raise Failed to connect
+function network_init(ip)
+    TCP_sock = socket.tcp()
+    TCP_sock:settimeout(7)
+    -- Verify TCP connection 
+    if not TCP_sock:connect(ip,49569) then
+        error('Failed to connect =(')
+    end
+
+    TCP_sock:settimeout(0)
+    got_H = false
+    send_net('H'..VERSION)
+
+    assert(config.name and config.level and config.character and 
+           config.save_replays_publicly)
+
+    send_json({name=config.name, level=config.level, character=config.character, 
+              save_replays_publicly = config.save_replays_publicly})
 end
 
 --- Close the TCP socket global variable
@@ -175,29 +201,6 @@ local process_message = {
     end
 }
 
---- Config socket (set timeout, ip, port)
--- @function network_init
--- @param ip init interface with this ip
--- @return nil
--- @raise Failed to connect
-function network_init(ip)
-    TCP_sock = socket.tcp()
-    TCP_sock:settimeout(7)
-    -- Verify TCP connection 
-    if not TCP_sock:connect(ip,49569) then
-        error('Failed to connect =(')
-    end
-
-    TCP_sock:settimeout(0)
-    got_H = false
-    send_net('H'..VERSION)
-
-    assert(config.name and config.level and config.character and 
-           config.save_replays_publicly)
-
-    send_json({name=config.name, level=config.level, character=config.character, 
-              save_replays_publicly = config.save_replays_publicly})
-end
 
 --- Verify if connection is ready
 -- @function connection_is_ready
