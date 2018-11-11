@@ -3,6 +3,8 @@
 -- Contains all the functions responsible for the implementation of the game's main loop.
 -- @module mainloop
 
+require("constants")
+
 local coroutine_wait = coroutine.yield
 local coroutine_resume = coroutine.resume
 
@@ -18,23 +20,23 @@ local spectator_list = nil
 local debug_mode_text = {[true]="On", [false]="Off"}  
 
 
---- Loads the game's resources
+--- Loads the game's resources, such as config files, sound components and graphics
 -- @tparam nil
 -- @treturn nil
 function load_game_resources()
     local func, arg = main_select_mode, nil
     replay = {}
-    config = {character="lip", level=5, name="defaultname", master_volume=100, SFX_volume=100, music_volume=100, debug_mode=false, save_replays_publicly = "with my name", assets_dir=default_assets_dir}
-    gprint("Reading config file", 300, 280)
+
+    gprint("Reading config file", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     read_conf_file() --  @todo stop making new config files
-    gprint("Reading replay file", 300, 280)
+    gprint("Reading replay file", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     read_replay_file()
-    gprint("Loading graphics...", 300, 280)
+    gprint("Loading graphics...", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     graphics_init() -- loads images and sets up graphical components
-    gprint("Loading sounds... (this takes a few seconds)", 300, 280)
+    gprint("Loading sounds... (this takes a few seconds)", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     sound_init() -- loads sound components 
     
@@ -52,13 +54,16 @@ end
 -- @param func The function to be wrapped
 function run_function_as_60hz(func)
     local frequency = 1 / 60
-    assert(func, "Run fuction as 60hz param nil")
+    assert(func, "function parameter is nil")
+
     for i=1, 4 do
         if leftover_time >= frequency then
             func()
             key_counts() -- increments the number of times a key was pressed
             this_frame_keys = {}
             leftover_time = leftover_time - frequency
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -69,9 +74,9 @@ end
 -- menu, those keys should definitely not move many cursors each.
 -- @param func a function
 -- @return 
-local multi = false
 function multi_func(func)
-    assert(func, "Milti func param nil")
+    local multi = false
+    assert(func, "multi_func is nil")
     return function(...)
         multi = true
         local res = {func(...)}
@@ -79,112 +84,6 @@ function multi_func(func)
         return unpack(res)
     end
 end
-
--- Keys that have a fixed function in menus can be bound to other
--- meanings, but should continue working the same way in menus.
-local menu_reserved_keys = {}
-
-
-function repeating_key(key)
-    local key_time = keys[key]
-    return this_frame_keys[key] or
-        (key_time and key_time > 25 and key_time % 3 ~= 0)
-end
-
---- Return a key in current the frame
--- @param key 
--- @return 
-function normal_key(key)
-    return this_frame_keys[key]
-end
-
---- Sets up a button in the keyboard regarding its fixed and configurable behaviour
--- @param fixed table with the desired behaviour
--- @param configurable table which the desired behaviour
--- @param rept boolean tells if a button repeats(like pressing and holding)
--- @return a fuction with 1 param 
-function menu_key_func(fixed, configurable, rept)
-    assert(fixed, "Menu key func param fixed is nil")
-    assert(configurable, "Menu key func param configurable is nil")
-    local query = normal_key
-    if rept then
-        query = repeating_key
-    end
-    
-    for i=1, #fixed do
-        menu_reserved_keys[#menu_reserved_keys + 1] = fixed[i]
-    end
-    
-    return function(k)
-        local res = false
-        if multi then
-            for i=1,#configurable do
-            res = res or query(k[configurable[i]])
-        end
-        else
-            for i=1, #fixed do
-                res = res or query(fixed[i])
-            end
-            for i=1, #configurable do
-                local keyname = k[configurable[i]]
-                res = res or query(keyname) and
-                not menu_reserved_keys[keyname]
-            end
-        end
-        return res
-    end
-end
-
-
---- Up arrow key
-menu_key_up = menu_key_func(
-      {"up"},
-      {"up"},
-      true
-    )
-
---- Down arrow key
-menu_key_down = menu_key_func(
-      {"down"},
-      {"down"},
-      true
-    )
-
---- Left arrow key
-menu_key_left = menu_key_func(
-      {"left"},
-      {"left"},
-      true
-    )
-
---- Right arrow key
-menu_key_right = menu_key_func(
-      {"right"},
-      {"right"},
-      true
-    )
-
---- Enter key
-menu_key_enter = menu_key_func(
-      {
-        "return",
-        "kenter",
-        "z"
-      },
-      {"swap1"},
-      false
-    )
-
---- Esc key
-menu_key_escape = menu_key_func(
-      {
-        "escape",
-        "x"
-      },
-      {"swap2"},
-      false
-    )
-
 
 -- Loop containing the main menu's behaviour
 do
@@ -285,23 +184,25 @@ do
             to_print = to_print .. "   " .. menu_options[i][1] .. "\n"
             end
             
-            gprint(arrow, 300, 280)
-            gprint(to_print, 300, 280)
+            gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+            gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
             coroutine_wait()
 
             assert(k, "No key was passed")
-            if menu_key_up(k) then
+            if MENU_KEY_UP(k) then
                 active_idx = wrap(1, active_idx - 1, #menu_options)
-            elseif menu_key_down(k) then
+            elseif MENU_KEY_DOWN(k) then
                 active_idx = wrap(1, active_idx + 1, #menu_options)
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 return menu_options[active_idx][2], menu_options[active_idx][3]
-            elseif menu_key_escape(k) then
+            elseif MENU_KEY_ESCAPE(k) then
                 if active_idx == #menu_options then
                     return menu_options[active_idx][2], menu_options[active_idx][3]
                 else
                     active_idx = #menu_options
                 end
+            else
+                -- Nothing to do.
             end
         end
     end
@@ -349,25 +250,35 @@ function select_speed_and_level_menu(next_func, ...)
     to_print2 = "                  " .. speed .. "\n                  "
         .. difficulties[difficulty]
         
-    gprint(arrow, 300, 280)
-    gprint(to_print, 300, 280)
-    gprint(to_print2, 300, 280)
+    gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+    gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
+    gprint(to_print2, X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
 
     assert(speed ~= 0, "Speed cannot be zero.")
     assert(difficulty ~= 0, "Difficulty cannot be zero.")
 
-    if menu_key_up(k) then
+    if MENU_KEY_UP(k) then
         active_idx = wrap(1, active_idx - 1, #menu_options)
-    elseif menu_key_down(k) then
+    elseif MENU_KEY_DOWN(k) then
         active_idx = wrap(1, active_idx + 1, #menu_options)
-    elseif menu_key_right(k) then
-        if active_idx == 1 then speed = bound(1, speed + 1, 99)
-        elseif active_idx == 2 then difficulty = bound(1, difficulty + 1, 3) end
-    elseif menu_key_left(k) then
-        if active_idx == 1 then speed = bound(1,speed-1,99)
-        elseif active_idx == 2 then difficulty = bound(1, difficulty - 1, 3) end
-    elseif menu_key_enter(k) then
+    elseif MENU_KEY_RIGHT(k) then
+        if active_idx == 1 then
+            speed = bound(1, speed + 1, 99)
+        elseif active_idx == 2 then
+            difficulty = bound(1, difficulty + 1, 3)
+        else
+            -- Nothing to do.
+        end
+    elseif MENU_KEY_LEFT(k) then
+        if active_idx == 1 then
+            speed = bound(1,speed-1,99)
+        elseif active_idx == 2 then
+            difficulty = bound(1, difficulty - 1, 3)
+        else
+            -- Nothing to do.
+        end
+    elseif MENU_KEY_ENTER(k) then
         if active_idx == 3 then
             return menu_options[active_idx][2], {speed, difficulty, ...}
         elseif active_idx == 4 then
@@ -375,12 +286,14 @@ function select_speed_and_level_menu(next_func, ...)
         else
             active_idx = wrap(1, active_idx + 1, #menu_options)
         end
-    elseif menu_key_escape(k) then
+    elseif MENU_KEY_ESCAPE(k) then
         if active_idx == #menu_options then
             return menu_options[active_idx][2], menu_options[active_idx][3]
         else
             active_idx = #menu_options
         end
+    else
+        -- Nothing to do.
     end
     end
 end
@@ -412,6 +325,8 @@ function main_endless(...)
         --  @todo proper game over.
             write_replay_file()
             return main_dumb_transition, {main_select_mode, "You scored " .. P1.score}
+        else
+            -- Nothing to do.
         end
 
         run_function_as_60hz(function() P1:local_run() end)
@@ -432,19 +347,26 @@ function main_time_attack(...)
     P1 = Stack(1, "time", ...)
 
     make_local_panels(P1, "000000")
-
+    local CLOCK_CONSTANT = 120 * 60
     while true do
         P1:render()
         coroutine_wait()
-        if P1.game_over or P1.CLOCK == 120 * 60 then
-      --  @todo proper game over.
+        if P1.game_over or P1.CLOCK == CLOCK_CONSTANT then
+            -- @todo proper game over.
             return main_dumb_transition, {main_select_mode, "You scored " .. P1.score}
+        else
+            -- Nothing to do.
         end
         
         run_function_as_60hz(function()
 
-        if (not P1.game_over) and P1.CLOCK < 120 * 60 then
-            P1:local_run() end end)
+            if (not P1.game_over) and P1.CLOCK < CLOCK_CONSTANT then
+                P1:local_run()
+            else
+                -- Nothing to do.
+            end 
+        end)
+        
     end
 end
 
@@ -473,11 +395,13 @@ function main_character_select()
         while not global_initialize_room_msg and retries < retry_limit do
             for _, message in ipairs(this_frame_messages) do
                 if message.create_room or message.character_select or message.spectate_request_granted then
-                global_initialize_room_msg = message
+                    global_initialize_room_msg = message
+                else
+                    -- Nothing to do.
                 end
             end
 
-            gprint("Waiting for room initialization...", 300, 280)
+            gprint("Waiting for room initialization...", X_STRING_CENTER, Y_STRING_CENTER)
             coroutine_wait()
             do_messages()
 
@@ -496,228 +420,104 @@ function main_character_select()
                     end
                 end
 
-                gprint("Lost connection.  Trying to rejoin...", 300, 280)
+                gprint("Lost connection.  Trying to rejoin...", X_STRING_CENTER, Y_STRING_CENTER)
                 coroutine_wait()
                 do_messages()
 
                 retries = retries + 1
+                    
             end
+        else
+            -- Nothing to do.
         end
 
-    -- runs if connection has failed
-    if not global_initialize_room_msg then
-        return main_dumb_transition, {main_select_mode, "Failed to connect.\n\nReturning to main menu", 60, 300}
-    end
+        -- runs if connection has failed
+        if not global_initialize_room_msg then
+            return main_dumb_transition, {main_select_mode, "Failed to connect.\n\nReturning to main menu", 60, 300}
+        else
+            -- Nothing to do.
+        end
 
-    message = global_initialize_room_msg
-    global_initialize_room_msg = nil
-    if message.ratings then
-        global_current_room_ratings = message.ratings
-    end
+        message = global_initialize_room_msg
+        global_initialize_room_msg = nil
+        if message.ratings then
+            global_current_room_ratings = message.ratings
+        end
 
-    global_my_state = message.a_menu_state
-    global_op_state = message.b_menu_state
+        global_my_state = message.a_menu_state
+        global_op_state = message.b_menu_state
 
-    if message.your_player_number then
-        my_player_number = message.your_player_number
-    elseif currently_spectating then
-        my_player_number = 1
-    elseif my_player_number and my_player_number ~= 0 then
-        print("We assumed our player number is still " .. my_player_number)
-    else
-        error("We never heard from the server as to what player number we are")
-        print("Error: The server never told us our player number.  Assuming it is 1")
-        my_player_number = 1
-    end
+        
+        if message.your_player_number then
+            my_player_number = message.your_player_number
+        elseif currently_spectating then
+            my_player_number = 1
+        -- Thats right its checking if is nil and different of zero
+        elseif my_player_number and my_player_number ~= 0 then
+            print("We assumed our player number is still " .. my_player_number)
+        else
+            error("We never heard from the server as to what player number we are")
+            print("Error: The server never told us our player number.  Assuming it is 1")
+            my_player_number = 1
+        end
 
-    if message.op_player_number then
-        op_player_number = message.op_player_number or op_player_number
-    elseif currently_spectating then
-        op_player_number = 2
-    elseif op_player_number and op_player_number ~= 0 then
-        print("We assumed op player number is still " .. op_player_number)
-    else
-        error("We never heard from the server as to what player number we are")
-        print("Error: The server never told us our player number.  Assuming it is 2")
-        op_player_number = 2
-    end
+        if message.op_player_number then
+            op_player_number = message.op_player_number or op_player_number
+        elseif currently_spectating then
+            op_player_number = 2
+        -- Thats right its checking if is nil and different of zero
+        elseif op_player_number and op_player_number ~= 0 then
+            print("We assumed op player number is still " .. op_player_number)
+        else
+            error("We never heard from the server as to what player number we are")
+            print("Error: The server never told us our player number.  Assuming it is 2")
+            op_player_number = 2
+        end
 
-    if message.win_counts then
-        update_win_counts(message.win_counts)
-    end
-    if message.replay_of_match_so_far then
-        replay_of_match_so_far = message.replay_of_match_so_far
-    end
+        if message.win_counts then
+            update_win_counts(message.win_counts)
+        else
+            -- Nothing to do.
+        end
+        if message.replay_of_match_so_far then
+            replay_of_match_so_far = message.replay_of_match_so_far
+        else
+            -- Nothing to do.
+        end
 
-    if message.ranked then
-        matchType = "Ranked"
-        match_type_message = ""
-    else 
-        matchType = "Casual"
-    end
+        if message.ranked then
+            matchType = "Ranked"
+            match_type_message = ""
+        else 
+            matchType = "Casual"
+        end
 
-    if currently_spectating then
-        P1 = {panel_buffer="", gpanel_buffer=""}
-        print("we reset P1 buffers at start of main_character_select()")
-    end
-    P2 = {
-        panel_buffer="",
-        gpanel_buffer=""
-        }
-      print("we reset P2 buffers at start of main_character_select()")
-      print("serverSupportsRanking: "..tostring(serverSupportsRanking))
-
-    local cursor,op_cursor, coordinate_x, coordinate_y = nil, nil, nil
-    -- If serverSupportsRanking is true then update map, else update update map
-    if serverSupportsRanking then
-        map = {
-            {
-                "match type desired",-- this 4 lines are the only different thing in if else
-                "match type desired",-- 2
-                "match type desired",-- 3
-                "match type desired",-- 4
-                "level",
-                "level",
-                "ready"
-            },
-            {
-                "random",
-                "windy",
-                "sherbet",
-                "thiana",
-                "ruby",
-                "lip",
-                "elias"
-            },
-            {
-                "flare",
-                "neris",
-                "seren",
-                "phoenix",
-                "dragon",
-                "thanatos",
-                "cordelia"
-            },
-            {
-                "lakitu",
-                "bumpty",
-                "poochy",
-                "wiggler",
-                "froggy",
-                "blargg",
-                "lungefish"
-            },
-            {
-                "raphael",
-                "yoshi",
-                "hookbill",
-                "navalpiranha",
-                "kamek",
-                "bowser",
-                "leave"
+        if currently_spectating then
+            P1 = {panel_buffer="", gpanel_buffer=""}
+            print("we reset P1 buffers at start of main_character_select()")
+        else
+            -- Nothing to do.
+        end
+        P2 = {
+            panel_buffer="",
+            gpanel_buffer=""
             }
-        }
-    else
-        map = {
-            {
-                "level",
-                "level",
-                "level",
-                "level", 
-                "level",
-                "level",
-                "ready"
-            },
-            {
-                "random",
-                "windy",
-                "sherbet",
-                "thiana",
-                "ruby",
-                "lip",
-                "elias"
-            },
-            {
-                "flare",
-                "neris",
-                "seren",
-                "phoenix",
-                "dragon",
-                "thanatos",
-                "cordelia"
-            },
-            {
-                "lakitu",
-                "bumpty",
-                "poochy",
-                "wiggler",
-                "froggy",
-                "blargg",
-                "lungefish"
-            },
-            {
-                "raphael",
-                "yoshi",
-                "hookbill",
-                "navalpiranha",
-                "kamek",
-                "bowser",
-                "leave"
-            }
-        }
+        print("we reset P2 buffers at start of main_character_select()")
+        print("serverSupportsRanking: "..tostring(serverSupportsRanking))
+
+        local cursor,op_cursor, coordinate_x, coordinate_y = nil, nil, nil
+        -- If serverSupportsRanking is true then update map, else update update map
+        if serverSupportsRanking then
+            map = MAP_RANKING
+        else
+            map = MAP_DEFAULT
         end
     end
 
     if character_select_mode == "1p_vs_yourself" then
-        map = {
-            {
-                "level",
-                "level",
-                "level",
-                "level",
-                "level",
-                "level",
-                "ready"
-            },
-            {
-                "random",
-                "windy",
-                "sherbet",
-                "thiana",
-                "ruby",
-                "lip",
-                "elias"
-            },
-            {
-                "flare",
-                "neris",
-                "seren",
-                "phoenix",
-                "dragon",
-                "thanatos",
-                "cordelia"
-            },
-            {
-                "lakitu",
-                "bumpty",
-                "poochy",
-                "wiggler",
-                "froggy",
-                "blargg",
-                "lungefish"
-            },
-            {
-                "raphael",
-                "yoshi",
-                "hookbill",
-                "navalpiranha",
-                "kamek",
-                "bowser",
-                "leave"
-            }
-        }
+        map = MAP_1P_VS_YOURSELF
     else
-        -- Nothing to do
+        -- Nothing to do.
     end
 
     local op_state = global_op_state or {character="lip", level=5, cursor="level", ready=false}
@@ -727,7 +527,7 @@ function main_character_select()
     local up, down, left, right = {-1, 0}, {1, 0}, {0, -1}, {0, 1}
 
     my_state = global_my_state or
-        {character=config.character, level=config.level, cursor="level", ready=false}
+        {character=CONFIG_TABLE.character, level=CONFIG_TABLE.level, cursor="level", ready=false}
 
     global_my_state = nil
     my_win_count = my_win_count or 0
@@ -738,24 +538,32 @@ function main_character_select()
         global_current_room_ratings = global_current_room_ratings or 
             {{new=0, old=0, difference=0}, {new=0, old=0, difference=0}}
 
-        my_expected_win_ratio = (100*round(1/(1+10^
-                ((global_current_room_ratings[op_player_number].new
-                    -global_current_room_ratings[my_player_number].new)
-                /rating_spread_modifier))
-                ,2))
+        -- Win ratio of the current player
+        my_expected_win_ratio = (global_current_room_ratings[op_player_number].new
+            -global_current_room_ratings[my_player_number].new)
+            /rating_spread_modifier
 
-        op_expected_win_ratio = (100*round(1/(1+10^
-                ((global_current_room_ratings[my_player_number].new
-                    -global_current_room_ratings[op_player_number].new)
-                /rating_spread_modifier))
-                ,2))
+        my_expected_win_ratio = 100 * round(1/1 + 10^my_expected_win_ratio, 2)
+
+        -- Win ratio of the oponent player
+        op_expected_win_ratio = (global_current_room_ratings[my_player_number].new
+            -global_current_room_ratings[op_player_number].new)
+            /rating_spread_modifier
+
+        op_expected_win_ratio = 100 * round(1/1 + 10^op_expected_win_ratio, 2)
+    else
+        -- Nothing to do.
     end
 
     if character_select_mode == "2p_net_vs" then
         matchType = matchType or "Casual"
         if matchType == "" then
             matchType = "Casual" 
+        else
+            -- Nothing to do.
         end
+    else
+        -- Nothing to do.
     end
 
     match_type_message = match_type_message or ""
@@ -773,6 +581,8 @@ function main_character_select()
         while can_x ~= cursor[1] or can_y ~= cursor[2] do
             if map[can_x][can_y] and map[can_x][can_y] ~= map[cursor[1]][cursor[2]] then
                 break
+            else
+                -- Nothing to do.
             end
 
             can_x, can_y = wrap(1, can_x+dx, coordinate_x), wrap(1, can_y+dy, coordinate_y)
@@ -798,6 +608,8 @@ function main_character_select()
         for j=1, coordinate_y do
             if map[i][j] then
                name_to_xy[map[i][j]] = {i,j}
+            else
+                -- Nothing to do.
             end
         end
     end
@@ -830,10 +642,13 @@ function main_character_select()
         grectangle("line", render_x, render_y, button_width, button_height)
 
         -- If character icon is a instance then get the dimensions and draw in screen
-        if IMG_character_icons[character_display_names_to_original_names[str]] then
-            local orig_w, orig_h = IMG_character_icons[character_display_names_to_original_names[str]]:getDimensions()
+        local icon = IMG_character_icons[character_display_names_to_original_names[str]]
+        if icon then
+            local orig_w, orig_h = icon:getDimensions()
             menu_draw(IMG_character_icons[character_display_names_to_original_names[str]],
             render_x, render_y, 0, button_width/orig_w, button_height/orig_h )
+        else
+            -- Nothing to do.
         end
 
         local y_add, x_add = 10, 30
@@ -848,8 +663,12 @@ function main_character_select()
             end
             if character_select_mode == "2p_net_vs" then
                 pstr = pstr .. "\n" .. op_name .. "'s level: " .. op_state.level
+            else
+                -- Nothing to do.
             end
             y_add, x_add = 9, 180
+        else
+            -- Nothing to do.
         end
 
         -- Formats pstr
@@ -857,24 +676,34 @@ function main_character_select()
             local my_type_selection, op_type_selection = "[casual]  ranked", "[casual]  ranked"
             if my_state.ranked then
                 my_type_selection = " casual  [ranked]"
+            else
+                -- Nothing to do.
             end
 
             if op_state.ranked then
                 op_type_selection = " casual  [ranked]"
+            else
+                -- Nothing to do.
             end
 
             pstr = pstr .. "\n" .. my_name .. ": " .. my_type_selection .. "\n" .. 
 
             op_name .. ": " .. op_type_selection
             y_add, x_add = 9, 180
+        else
+            -- Nothing to do.
         end
 
         if my_state.cursor == str then
             pstr = pstr.."\n" .. my_name
+        else
+            -- Nothing to do.
         end
 
         if op_state and op_name and op_state.cursor == str then
             pstr = pstr .. "\n" .. op_name
+        else
+            -- Nothing to do.
         end
 
         local cur_blink_frequency = 4
@@ -910,12 +739,20 @@ function main_character_select()
                 local cursor_scale = (button_height + (spacing * 2)) / cur_img_h
 
                 menu_drawq(cur_img, cur_img_left, render_x - spacing, render_y-spacing, 0, cursor_scale , cursor_scale)
-                menu_drawq(cur_img, cur_img_right,
-                render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
-                render_y - spacing, 0, cursor_scale, cursor_scale)
+                menu_drawq(
+                    cur_img,
+                    cur_img_right,
+                    render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
+                    render_y - spacing,
+                    0,
+                    cursor_scale,
+                    cursor_scale
+                    )
             end
+        else
+            -- Nothing to do.
         end
-
+        -- Draw player 1
         if my_state and my_state.cursor and
         (my_state.cursor == str or my_state.cursor == character_display_names_to_original_names[str]) then
             player_num = 1
@@ -923,27 +760,43 @@ function main_character_select()
                 if (math.floor(menu_clock / cur_blink_frequency) + player_num) % 2 + 1 == player_num then
                     draw_cur_this_frame = true
                     cursor_frame = 1
+                else
+                    draw_cur_this_frame = false
+                end
             else
-                draw_cur_this_frame = false
+                draw_cur_this_frame = true
+                cursor_frame = (math.floor(menu_clock / cur_pos_change_frequency) + player_num) % 2 + 1
+                cur_img = IMG_char_sel_cursors[player_num][cursor_frame]
+            end
+
+            -- Draw image in the screen
+            if draw_cur_this_frame then
+                cur_img = IMG_char_sel_cursors[player_num][cursor_frame]
+                cur_img_left = IMG_char_sel_cursor_halves.left[player_num][cursor_frame]
+                cur_img_right = IMG_char_sel_cursor_halves.right[player_num][cursor_frame]
+                local cur_img_w, cur_img_h = cur_img:getDimensions()
+                local cursor_scale = (button_height + (spacing * 2)) / cur_img_h
+                menu_drawq(
+                    cur_img,
+                    cur_img_left,
+                    render_x-spacing,
+                    render_y-spacing,
+                    0,
+                    cursor_scale,
+                    cursor_scale
+                    )
+                menu_drawq(
+                    cur_img,
+                    cur_img_right,
+                    render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
+                    render_y - spacing,
+                    0,
+                    cursor_scale,
+                    cursor_scale
+                    )
             end
         else
-            draw_cur_this_frame = true
-            cursor_frame = (math.floor(menu_clock / cur_pos_change_frequency) + player_num) % 2 + 1
-            cur_img = IMG_char_sel_cursors[player_num][cursor_frame]
-        end
-
-        -- Draw image in the screen
-        if draw_cur_this_frame then
-            cur_img = IMG_char_sel_cursors[player_num][cursor_frame]
-            cur_img_left = IMG_char_sel_cursor_halves.left[player_num][cursor_frame]
-            cur_img_right = IMG_char_sel_cursor_halves.right[player_num][cursor_frame]
-            local cur_img_w, cur_img_h = cur_img:getDimensions()
-            local cursor_scale = (button_height + (spacing * 2)) / cur_img_h
-            menu_drawq(cur_img, cur_img_left, render_x-spacing, render_y-spacing, 0, cursor_scale , cursor_scale)
-            menu_drawq(cur_img, cur_img_right,
-            render_x + button_width + spacing - cur_img_w * cursor_scale / 2,
-            render_y - spacing, 0, cursor_scale, cursor_scale)
-        end
+            -- Nothing to do.
         end
         gprint(pstr, render_x + 6, render_y + y_add)
     end
@@ -963,138 +816,160 @@ function main_character_select()
                             op_state = message.menu_state
                         elseif message.player_number == 1 then
                             my_state = message.menu_state
+                        else
+                            -- Nothing to do.
                         end
                     else
-                        op_state = message.menu_state
+                        op_state = message.menu_state                        
+                    end 
+                else
+                    -- Nothing to do.
                 end
-            end
             
-            assert(message, "message is null")
-            if message.ranked_match_approved then
-                matchType = "Ranked"
-                match_type_message = ""
-            elseif message.ranked_match_denied then
-                matchType = "Casual"
-                match_type_message = "Not ranked. "
-                if message.reasons then
-                    match_type_message = match_type_message .. (message.reasons[1] or "Reason unknown")
+                assert(message, "message is null")
+                if message.ranked_match_approved then
+                    matchType = "Ranked"
+                    match_type_message = ""
+                elseif message.ranked_match_denied then
+                    matchType = "Casual"
+                    match_type_message = "Not ranked. "
+                    if message.reasons then
+                        match_type_message = match_type_message .. (message.reasons[1] or "Reason unknown")
+                    else
+                        -- Nothing to do.
+                    end
                 end
-            end
-            if message.leave_room then
-                my_win_count = 0
-                op_win_count = 0
-                write_char_sel_settings_to_file()
-                return main_net_vs_lobby
-            end
-            
-            if message.match_start or replay_of_match_so_far then
-                local fake_P1 = P1
-                print("currently_spectating: " .. tostring(currently_spectating))
-                local fake_P2 = P2
-                P1 = Stack(1, "vs", message.player_settings.level,
-                    message.player_settings.character, message.player_settings.player_number)
-                P2 = Stack(2, "vs", message.opponent_settings.level,
-                    message.opponent_settings.character, message.opponent_settings.player_number)
-                if currently_spectating then
-                    P1.panel_buffer = fake_P1.panel_buffer
-                    P1.gpanel_buffer = fake_P1.gpanel_buffer
+                if message.leave_room then
+                    my_win_count = 0
+                    op_win_count = 0
+                    write_char_sel_settings_to_file()
+                    return main_net_vs_lobby
+                else
+                    -- Nothing to do.
                 end
                 
-                P2.panel_buffer = fake_P2.panel_buffer
-                P2.gpanel_buffer = fake_P2.gpanel_buffer
-                P1.garbage_target = P2
-                P2.garbage_target = P1
-                P2.pos_x = 172
-                P2.score_x = 410
-                replay.vs = {
-                    P = "",
-                    O = "",
-                    I = "",
-                    Q = "",
-                    R = "",
-                    in_buf = "",
-                    P1_level = P1.level,
-                    P2_level = P2.level,
-                    P1_name = my_name,
-                    P2_name = op_name,
-                    P1_char = P1.character,
-                    P2_char = P2.character,
-                    ranked = message.ranked
-                }
-                if currently_spectating and replay_of_match_so_far then --we joined a match in progress
-                    replay.vs = replay_of_match_so_far.vs
-                    P1.input_buffer = replay_of_match_so_far.vs.in_buf
-                    P1.panel_buffer = replay_of_match_so_far.vs.P
-                    P1.gpanel_buffer = replay_of_match_so_far.vs.Q
-                    P2.input_buffer = replay_of_match_so_far.vs.I
-                    P2.panel_buffer = replay_of_match_so_far.vs.O
-                    P2.gpanel_buffer = replay_of_match_so_far.vs.R
-                    
-                    if replay.vs.ranked then
-                        matchType = "Ranked"
-                        match_type_message = ""
-                    else 
-                        matchType = "Casual"
+                if message.match_start or replay_of_match_so_far then
+                    local fake_P1 = P1
+                    print("currently_spectating: " .. tostring(currently_spectating))
+                    local fake_P2 = P2
+                    P1 = Stack(1, "vs", message.player_settings.level,
+                        message.player_settings.character, message.player_settings.player_number)
+                    P2 = Stack(2, "vs", message.opponent_settings.level,
+                        message.opponent_settings.character, message.opponent_settings.player_number)
+                    if currently_spectating then
+                        P1.panel_buffer = fake_P1.panel_buffer
+                        P1.gpanel_buffer = fake_P1.gpanel_buffer
+                    else
+                        -- Nothing to do.
                     end
                     
-                    replay_of_match_so_far = nil
-                    P1.play_to_end = true  --this makes foreign_run run until caught up
-                    P2.play_to_end = true
+                    P2.panel_buffer = fake_P2.panel_buffer
+                    P2.gpanel_buffer = fake_P2.gpanel_buffer
+                    P1.garbage_target = P2
+                    P2.garbage_target = P1
+                    P2.pos_x = 172
+                    P2.score_x = 410
+                    replay.vs = {
+                        P = "",
+                        O = "",
+                        I = "",
+                        Q = "",
+                        R = "",
+                        in_buf = "",
+                        P1_level = P1.level,
+                        P2_level = P2.level,
+                        P1_name = my_name,
+                        P2_name = op_name,
+                        P1_char = P1.character,
+                        P2_char = P2.character,
+                        ranked = message.ranked
+                    }
+                    if currently_spectating and replay_of_match_so_far then --we joined a match in progress
+                        replay.vs = replay_of_match_so_far.vs
+                        P1.input_buffer = replay_of_match_so_far.vs.in_buf
+                        P1.panel_buffer = replay_of_match_so_far.vs.P
+                        P1.gpanel_buffer = replay_of_match_so_far.vs.Q
+                        P2.input_buffer = replay_of_match_so_far.vs.I
+                        P2.panel_buffer = replay_of_match_so_far.vs.O
+                        P2.gpanel_buffer = replay_of_match_so_far.vs.R
+                        
+                        if replay.vs.ranked then
+                            matchType = "Ranked"
+                            match_type_message = ""
+                        else 
+                            matchType = "Casual"
+                        end
+                        
+                        replay_of_match_so_far = nil
+                        P1.play_to_end = true  --this makes foreign_run run until caught up
+                        P2.play_to_end = true
+                    else
+                        -- Nothing to do.
+                    end
+                    
+                if not currently_spectating then
+                    ask_for_gpanels("000000")
+                    ask_for_panels("000000")
+                else
+                    -- Nothing to do.
                 end
                 
-            if not currently_spectating then
-                ask_for_gpanels("000000")
-                ask_for_panels("000000")
-            end
-            
-            to_print = "Game is starting!\n".."Level: "..P1.level.."\nOpponent's level: "..P2.level
-            
-            if P1.play_to_end or P2.play_to_end then
-                to_print = "Joined a match in progress.\nCatching up..."
-            end
+                to_print = "Game is starting!\n".."Level: "..P1.level.."\nOpponent's level: "..P2.level
+                
+                if P1.play_to_end or P2.play_to_end then
+                    to_print = "Joined a match in progress.\nCatching up..."
+                else
+                    -- Nothing to do.
+                end
 
-            for i=1, 30 do
-                gprint(to_print,300, 280)
-                do_messages()
-                coroutine_wait()
-            end
-            
-            local game_start_timeout = 0
-            
-            -- start's the game for 2p mode
-            while P1.panel_buffer == "" or P2.panel_buffer == ""
-                or P1.gpanel_buffer == "" or P2.gpanel_buffer == "" do
-              --testing getting stuck here at "Game is starting"
-                game_start_timeout = game_start_timeout + 1
-                print("game_start_timeout = " .. game_start_timeout)
-                print("P1.panel_buffer = " .. P1.panel_buffer)
-                print("P2.panel_buffer = " .. P2.panel_buffer)
-                print("P1.gpanel_buffer = " .. P1.gpanel_buffer)
-                print("P2.gpanel_buffer = " .. P2.gpanel_buffer)
-                gprint(to_print, 300, 280)
-                do_messages()
-                coroutine_wait()
-                local LIMITTIMEOUT = 500
+                for i=1, 30 do
+                    gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
+                    do_messages()
+                    coroutine_wait()
+                end
+                
+                local game_start_timeout = 0
+                
+                -- start's the game for 2p mode
+                while P1.panel_buffer == "" or P2.panel_buffer == ""
+                    or P1.gpanel_buffer == "" or P2.gpanel_buffer == "" do
+                --testing getting stuck here at "Game is starting"
+                    game_start_timeout = game_start_timeout + 1
+                    print("game_start_timeout = " .. game_start_timeout)
+                    print("P1.panel_buffer = " .. P1.panel_buffer)
+                    print("P2.panel_buffer = " .. P2.panel_buffer)
+                    print("P1.gpanel_buffer = " .. P1.gpanel_buffer)
+                    print("P2.gpanel_buffer = " .. P2.gpanel_buffer)
+                    gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
+                    do_messages()
+                    coroutine_wait()
+                    local LIMITTIMEOUT = 500
 
-                if game_start_timeout > LIMITTIMEOUT then
-                    return main_dumb_transition, {main_select_mode, 
-                                "game-is-starting bug diagnostic version 2\n\ngame start timed out."
-                                .. "\n Please screenshot this and\npost it in #panel-attack-bugs-features"
-                                .."\n".."message.match_start = "..(tostring(message.match_start) or "nil")
-                                .."\n".."replay_of_match_so_far = "..(tostring(replay_of_match_so_far) or "nil")
-                                .."\n".."P1.panel_buffer = "..P1.panel_buffer
-                                .."\n".."P2.panel_buffer = "..P2.panel_buffer
-                                .."\n".."P1.gpanel_buffer = "..P1.gpanel_buffer
-                                .."\n".."P2.gpanel_buffer = "..P2.gpanel_buffer,
-                                600}
+                    if game_start_timeout > LIMITTIMEOUT then
+                        return main_dumb_transition, {main_select_mode, 
+                                    "game-is-starting bug diagnostic version 2\n\ngame start timed out."
+                                    .. "\n Please screenshot this and\npost it in #panel-attack-bugs-features"
+                                    .."\n".."message.match_start = "..(tostring(message.match_start) or "nil")
+                                    .."\n".."replay_of_match_so_far = "..(tostring(replay_of_match_so_far) or "nil")
+                                    .."\n".."P1.panel_buffer = "..P1.panel_buffer
+                                    .."\n".."P2.panel_buffer = "..P2.panel_buffer
+                                    .."\n".."P1.gpanel_buffer = "..P1.gpanel_buffer
+                                    .."\n".."P2.gpanel_buffer = "..P2.gpanel_buffer,
+                                    600}
+                    else
+                        -- Nothing to do.
+                    end
+                end
+                
+                P1:starting_state()
+                P2:starting_state()
+                return main_net_vs
+                else
+                    -- Nothing to do.
                 end
             end
-            
-            P1:starting_state()
-            P2:starting_state()
-            return main_net_vs
-            end
-        end
+        else
+            -- Nothing to do.
         end
 
         -- responsible for displaying the strings on the display
@@ -1128,6 +1003,8 @@ function main_character_select()
             else
                 opRatingDifference = "(" .. global_current_room_ratings[op_player_number].difference .. ") "
             end
+        else
+            -- Nothing to do.
         end
 
         local state = ""
@@ -1136,22 +1013,32 @@ function main_character_select()
 
         if serverSupportsRanking then
             state = state .. ":  Rating: " .. myRatingDifference .. global_current_room_ratings[my_player_number].new
+        else
+            -- Nothing to do.
         end
 
         if character_select_mode == "2p_net_vs" or character_select_mode == "2p_local_vs" then
             state = state .. "  Wins: " .. my_win_count
+        else
+            -- Nothing to do.
         end
 
         if serverSupportsRanking or my_win_count + op_win_count > 0 then
             state = state .. "  Win Ratio:"
+        else
+            -- Nothing to do.
         end
 
         if my_win_count + op_win_count > 0 then
             state = state .. "  actual: " .. (100 * round(my_win_count/(op_win_count+my_win_count), 2)) .. "%"
+        else
+            -- Nothing to do.
         end
 
         if serverSupportsRanking then
             state = state .. "  expected: " .. my_expected_win_ratio .. "%"
+        else
+            -- Nothing to do.
         end
 
         state = state .. "  Char: " .. character_display_names[my_state.character]..
@@ -1165,53 +1052,76 @@ function main_character_select()
             if serverSupportsRanking then
                 state = state .. ":  Rating: " .. opRatingDifference..
                    global_current_room_ratings[op_player_number].new
+            else
+                -- Nothing to do.
             end
 
             state = state .. "  Wins: " .. op_win_count 
 
             if serverSupportsRanking or my_win_count + op_win_count > 0 then
                 state = state .. "  Win Ratio:"
+            else
+                -- Nothing to do.
             end
 
             if my_win_count + op_win_count > 0 then
                 state = state .. "  actual: " .. (100*round(op_win_count/(op_win_count+my_win_count),2)) .. "%"
+            else
+                -- Nothing to do.
             end
 
             if serverSupportsRanking then
                 state = state .. "  expected: " .. op_expected_win_ratio .. "%"
+            else
+                -- Nothing to do.
             end
             
             state = state.."  Char: " .. character_display_names[op_state.character] .. 
                 "  Ready: " .. tostring(op_state.ready or false)
             --state = state.." "..json.encode(op_state)
+        else
+            -- Nothing to do.
         end
         gprint(state, 50, 50)
         if character_select_mode == "2p_net_vs" then
             if not my_state.ranked and not op_state.ranked then
                 match_type_message = ""
+            else
+                -- Nothing to do.
             end
-        gprint(matchType, 375, 15)
-        gprint(match_type_message, 100, 85)
+            gprint(matchType, 375, 15)
+            gprint(match_type_message, 100, 85)
+        else
+            -- Nothing to do.
         end
 
         coroutine_wait()
+        -- Spectation isn't us
         if not currently_spectating then
-            if menu_key_up(k) then
+            if MENU_KEY_UP(k) then
                 if not selected then move_cursor(up) end
-                elseif menu_key_down(k) then
+                elseif MENU_KEY_DOWN(k) then
                     if not selected then move_cursor(down) end
-                    elseif menu_key_left(k) then
+                    elseif MENU_KEY_LEFT(k) then
                         if selected and active_str == "level" then
-                            config.level = bound(1, config.level - 1, 10)
+                            CONFIG_TABLE.level = bound(1, CONFIG_TABLE.level - 1, 10)
+                        else
+                            -- Nothing to do.
                         end
-                    if not selected then move_cursor(left) end
-                    elseif menu_key_right(k) then
+                    if not selected then
+                        move_cursor(left)
+                    else
+                        -- Nothing to do.
+                    end
+                    elseif MENU_KEY_RIGHT(k) then
                         if selected and active_str == "level" then
-                            config.level = bound(1, config.level + 1, 10)
-                end
+                            CONFIG_TABLE.level = bound(1, CONFIG_TABLE.level + 1, 10)
+                        else
+                            -- Nothing to do.
+                        end
             -- handles keys input
             if not selected then move_cursor(right) end
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 if selectable[active_str] then
                     selected = not selected
                 elseif active_str == "leave" then
@@ -1221,17 +1131,16 @@ function main_character_select()
                         return main_select_mode
                 end
             elseif active_str == "random" then
-                config.character = uniformly(characters)
+                CONFIG_TABLE.character = uniformly(characters)
             elseif active_str == "match type desired" then
-                config.ranked = not config.ranked
+                CONFIG_TABLE.ranked = not CONFIG_TABLE.ranked
             else
-                config.character = active_str
+                CONFIG_TABLE.character = active_str
                 --When we select a character, move cursor to "ready"
                 active_str = "ready"
                 cursor = shallowcpy(name_to_xy["ready"])
             end
-
-            elseif menu_key_escape(k) then
+            elseif MENU_KEY_ESCAPE(k) then
                 if active_str == "leave" then
                     if character_select_mode == "2p_net_vs" then
                         do_leave()
@@ -1244,7 +1153,7 @@ function main_character_select()
             end
 
             active_str = map[cursor[1]][cursor[2]]
-            my_state = {character=config.character, level=config.level, cursor=active_str, ranked=config.ranked,
+            my_state = {character=CONFIG_TABLE.character, level=CONFIG_TABLE.level, cursor=active_str, ranked=CONFIG_TABLE.ranked,
                         ready=(selected and active_str=="ready")}
             
             if character_select_mode == "2p_net_vs" and not content_equal(my_state, prev_state) 
@@ -1253,8 +1162,8 @@ function main_character_select()
             end
             
             prev_state = my_state
-        else -- (we are are spectating)
-            if menu_key_escape(k) then
+        else -- (we are spectating)
+            if MENU_KEY_ESCAPE(k) then
                 do_leave()
                 return main_net_vs_lobby
             end
@@ -1267,10 +1176,14 @@ function main_character_select()
             make_local_gpanels(P1, "000000")
             P1:starting_state()
             return main_dumb_transition, {main_local_vs_yourself, "Game is starting...", 30, 30}
+        else
+            -- Nothing to do.
         end
 
         if character_select_mode == "2p_net_vs" then 
             do_messages()
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1329,7 +1242,7 @@ function main_net_vs_lobby()
                         login_status_message = "Welcome, new user: "..my_name
                     elseif message.name_changed then
                         login_status_message = "Welcome, your username has been updated. \n\nOld name:  \""
-                        .. message.old_name .. "\"\n\nNew name:  \"" .. message.new_name .. "\""
+                            .. message.old_name .. "\"\n\nNew name:  \"" .. message.new_name .. "\""
                         login_status_message_duration = 5
                     else
                         login_status_message = "Welcome back, " .. my_name
@@ -1352,9 +1265,16 @@ function main_net_vs_lobby()
         
         for _, message in ipairs(this_frame_messages) do
             if message.choose_another_name and message.choose_another_name.used_names then
-                return main_dumb_transition, {main_select_mode, "Error: name is taken :<\n\nIf you had just left the server,\nit may not have realized it yet, try joining again.\n\nThis can also happen if you have two\ninstances of Panel Attack open.\n\nPress Swap or Back to continue.", 60, 600}
+                return main_dumb_transition, {main_select_mode, 
+                    "Error: name is taken :<\n\nIf you had just left the server,\nit may not have realized it yet, try joining again.\n\nThis can also happen if you have two\ninstances of Panel Attack open.\n\nPress Swap or Back to continue.",
+                    60, 
+                    600
+                    }
             elseif message.choose_another_name and message.choose_another_name.reason then
-                return main_dumb_transition, {main_select_mode, "Error: ".. message.choose_another_name.reason, 60}
+                return main_dumb_transition, {main_select_mode,
+                        "Error: ".. message.choose_another_name.reason,
+                        60
+                        }
         end
         
         if message.create_room or message.spectate_request_granted then
@@ -1401,8 +1321,10 @@ function main_net_vs_lobby()
         menu_options = {}
         
         for _, v in ipairs(unpaired_players) do
-            if v ~= config.name then
+            if v ~= CONFIG_TABLE.name then
                 menu_options[#menu_options + 1] = v
+            else
+                -- Nothing to do.
             end
         end
         
@@ -1446,7 +1368,11 @@ function main_net_vs_lobby()
                 to_print = to_print .. "   " .. menu_options[i] ..
                     (willing_players[menu_options[i]] and " (Wants to play with you :o)" or "") .. "\n"
             elseif i < #menu_options - 1 and menu_options[i].name then
-                to_print = to_print .. "   spectate " .. menu_options[i].name .. " (".. menu_options[i].state .. ")\n" --printing room names 
+                to_print = to_print .. --printing room names
+                    "   spectate " .. 
+                    menu_options[i].name .. 
+                    " (".. menu_options[i].state .. 
+                    ")\n"
             elseif i < #menu_options then
                 to_print = to_print .. "   " .. menu_options[i] .. "\n"
             else
@@ -1455,26 +1381,33 @@ function main_net_vs_lobby()
         end
         
         gprint(notice[#menu_options > 2], lobby_menu_x[showing_leaderboard], 250)
-        gprint(arrow, lobby_menu_x[showing_leaderboard], 280)
-        gprint(to_print, lobby_menu_x[showing_leaderboard], 280)
+        gprint(arrow, lobby_menu_x[showing_leaderboard], Y_STRING_CENTER)
+        gprint(to_print, lobby_menu_x[showing_leaderboard], Y_STRING_CENTER)
         
         if showing_leaderboard then
             gprint(leaderboard_string, 500, 160)
+        else
+            -- Nothing to do.
         end
       
         coroutine_wait()
-        if menu_key_up(k) then
+        if MENU_KEY_UP(k) then
             if showing_leaderboard then
                 if leaderboard_first_idx_to_show>1 then
                     leaderboard_first_idx_to_show = leaderboard_first_idx_to_show - 1
                     leaderboard_last_idx_to_show = leaderboard_last_idx_to_show - 1    
-                    leaderboard_string = build_viewable_leaderboard_string(leaderboard_report, 
-                                    leaderboard_first_idx_to_show, leaderboard_last_idx_to_show)
+                    leaderboard_string = build_viewable_leaderboard_string(
+                            leaderboard_report, 
+                            leaderboard_first_idx_to_show,
+                            leaderboard_last_idx_to_show
+                            )
+                else
+                    -- Nothing to do.
                 end
             else
                 active_idx = wrap(1, active_idx-1, #menu_options)
             end
-        elseif menu_key_down(k) then
+        elseif MENU_KEY_DOWN(k) then
             if showing_leaderboard then
                 if leaderboard_last_idx_to_show < #leaderboard_report then
                     leaderboard_first_idx_to_show = leaderboard_first_idx_to_show + 1
@@ -1485,7 +1418,7 @@ function main_net_vs_lobby()
             else
                 active_idx = wrap(1, active_idx+1, #menu_options)
             end
-        elseif menu_key_enter(k) then
+        elseif MENU_KEY_ENTER(k) then
             spectator_list = {}
             spectators_string = ""
             if active_idx == #menu_options then
@@ -1498,7 +1431,7 @@ function main_net_vs_lobby()
                 showing_leaderboard = false --toggle it off
             end
         elseif active_idx <= lastPlayerIndex then
-            my_name = config.name
+            my_name = CONFIG_TABLE.name
             op_name = menu_options[active_idx]
             currently_spectating = false
             request_game(menu_options[active_idx])
@@ -1509,7 +1442,7 @@ function main_net_vs_lobby()
             room_number_last_spectated = menu_options[active_idx].roomNumber
             request_spectate(menu_options[active_idx].roomNumber)
         end
-        elseif menu_key_escape(k) then
+        elseif MENU_KEY_ESCAPE(k) then
             if active_idx == #menu_options then
                 return main_select_mode
             elseif showing_leaderboard then
@@ -1524,6 +1457,8 @@ function main_net_vs_lobby()
             print("#menu_options: "..#menu_options.."  idx_old: "
             ..prev_act_idx.."  idx_new: "..active_idx.."  active_back: "..tostring(active_back))
             prev_act_idx = active_idx
+        else
+            -- Nothing to do.
         end
         
         do_messages()
@@ -1541,6 +1476,8 @@ function update_win_counts(win_counts)
     elseif P1.player_number == 2 then
         my_win_count = win_counts[2] or 0
         op_win_count = win_counts[1] or 0
+    else
+        -- Nothing to do.
     end
 end
 
@@ -1554,11 +1491,15 @@ function spectator_list_string(list)
         str = str..v
         if k < #list then
             str = str.."\n"
+        else
+            -- Nothing to do.
         end
     end
     
     if str ~= "" then
         str = "Spectator(s):\n"..str
+    else
+        -- Nothing to do.
     end
     
     return str
@@ -1589,6 +1530,8 @@ function build_viewable_leaderboard_string(report, first_viewable_idx, last_view
         
         if i < #report then
             str = str .. "\n"
+        else
+            -- Nothing to do.
         end
     end
     
@@ -1600,22 +1543,22 @@ end
 -- @return function main_net_vs
 function main_net_vs_setup(ip)
     assert(ip, "Main net vs setup param is nil")
-    if not config.name then
+    if not CONFIG_TABLE.name then
         return main_set_name
     else 
-        my_name = config.name
+        my_name = CONFIG_TABLE.name
     end
 
     P1, P1_level, P2_level, got_opponent = nil, nil, nil, nil
     P2 = {panel_buffer="", gpanel_buffer=""}
 
-    gprint("Setting up connection...", 300, 280)
+    gprint("Setting up connection...", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     network_init(ip)
 
     local timeout_counter = 0
     while not connection_is_ready() do
-        gprint("Connecting...", 300, 280)
+        gprint("Connecting...", X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         do_messages()
     end
@@ -1627,7 +1570,7 @@ function main_net_vs_setup(ip)
     local my_level, to_print, fake_P2 = 5, nil, P2
     local k = keyboard[1]
     while got_opponent == nil do
-        gprint("Waiting for opponent...", 300, 280)
+        gprint("Waiting for opponent...", X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         do_messages()
     end
@@ -1635,16 +1578,16 @@ function main_net_vs_setup(ip)
     while P1_level == nil or P2_level == nil do
         to_print = (P1_level and "L" or"Choose l") .. "evel: "..my_level..
             "\nOpponent's level: "..(P2_level or "???")
-        gprint(to_print, 300, 280)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         do_messages()
         if P1_level then
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 P1_level = my_level
                 net_send("L"..(({[10]=0})[my_level] or my_level))
-            elseif menu_key_up(k) or menu_key_right(k) then
+            elseif MENU_KEY_UP(k) or MENU_KEY_RIGHT(k) then
                 my_level = bound(1,my_level+1,10)
-            elseif menu_key_down(k) or menu_key_left(k) then
+            elseif MENU_KEY_DOWN(k) or MENU_KEY_LEFT(k) then
                 my_level = bound(1,my_level-1,10)
             end
         end
@@ -1653,7 +1596,9 @@ function main_net_vs_setup(ip)
         if currently_spectating then
             P1.panel_buffer = fake_P1.panel_buffer
             P1.gpanel_buffer = fake_P1.gpanel_buffer
-    end
+        else
+            -- Nothing to do.
+        end
     
     P2.panel_buffer = fake_P2.panel_buffer
     P2.gpanel_buffer = fake_P2.gpanel_buffer
@@ -1676,14 +1621,14 @@ function main_net_vs_setup(ip)
     end
 
     for i=1, 30 do
-        gprint(to_print,300, 280)
+        gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
         do_messages()
         coroutine_wait()
     end
     
     while P1.panel_buffer == "" or P2.panel_buffer == ""
         or P1.gpanel_buffer == "" or P2.gpanel_buffer == "" do
-        gprint(to_print,300, 280)
+        gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
         do_messages()
         coroutine_wait()
     end
@@ -1703,10 +1648,11 @@ function main_net_vs()
     local k = keyboard[1]  --may help with spectators leaving games in progress
     local end_text = nil
     consuming_timesteps = true
-    local op_name_y = 40
-
+    local op_name_y = nil
     if string.len(my_name) > 12 then
         op_name_y = 55
+    else
+        op_name_y = 40
     end
 
     while true do
@@ -1716,6 +1662,8 @@ function main_net_vs()
             if message.leave_room then
                 write_char_sel_settings_to_file()
                 return main_net_vs_lobby
+            else
+                -- Nothing to do.
             end
         end
 
@@ -1724,8 +1672,10 @@ function main_net_vs()
         gprint("Wins: "..my_win_count, 315, 70)
         gprint("Wins: "..op_win_count, 410, 70)
 
-        if not config.debug_mode then --this is printed in the same space as the debug details
+        if not CONFIG_TABLE.debug_mode then --this is printed in the same space as the debug details
             gprint(spectators_string, 315, 265)
+        else
+            -- Nothing to do.
         end
         
         if matchType == "Ranked" then
@@ -1736,7 +1686,11 @@ function main_net_vs()
             if global_current_room_ratings[op_player_number] 
                 and global_current_room_ratings[op_player_number].new then
                 gprint("Rating: "..global_current_room_ratings[op_player_number].new, 410, 85)
+            else
+                -- Nothing to do.
             end
+        else
+            -- Nothing to do.
         end
         
         if not (P1 and P1.play_to_end) and not (P2 and P2.play_to_end) then
@@ -1749,8 +1703,12 @@ function main_net_vs()
                 op_win_count = 0
                 json_send({leave_room=true})
                 return main_net_vs_lobby
+            else
+                -- Nothing to do.
             end
             do_messages()
+        else
+            -- Nothing to do.
         end
       
         print(P1.CLOCK, P2.CLOCK)
@@ -1775,6 +1733,8 @@ function main_net_vs()
         end
         if not P2.game_over then
             P2:foreign_run()
+        else
+            -- Nothing to do.
         end
         
         local outcome_claim = nil
@@ -1789,7 +1749,8 @@ function main_net_vs()
             end_text = my_name.." Wins ^^"
             my_win_count = my_win_count + 1 -- leave this in
             outcome_claim = P1.player_number
-        
+        else
+            -- Nothing to do.
         end
         
         if end_text then
@@ -1830,6 +1791,8 @@ function main_net_vs()
             else
                 return main_dumb_transition, {main_character_select, end_text, 45, 180}
             end
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1844,28 +1807,32 @@ main_local_vs_setup = multi_func(function()
     while chosen[1] == nil or chosen[2] == nil do
         to_print = (chosen[1] and "" or "Choose ") .. "P1 level: "..maybe[1].."\n"
             ..(chosen[2] and "" or "Choose ") .. "P2 level: "..(maybe[2])
-        gprint(to_print, 300, 280)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         
         for i=1, 2 do
             local k=keyboard[i]
             
-            if menu_key_escape(k) then
+            if MENU_KEY_ESCAPE(k) then
                 if chosen[i] then
                     chosen[i] = nil
                 else
                     return main_select_mode
             end
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 chosen[i] = maybe[i]
-            elseif menu_key_up(k) or menu_key_right(k) then
+            elseif MENU_KEY_UP(k) or MENU_KEY_RIGHT(k) then
                 if not chosen[i] then
                     maybe[i] = bound(1, maybe[i] + 1, 10)
                 end
-            elseif menu_key_down(k) or menu_key_left(k) then
+            elseif MENU_KEY_DOWN(k) or MENU_KEY_LEFT(k) then
                 if not chosen[i] then
                     maybe[i] = bound(1, maybe[i] - 1, 10)
+                else
+                    -- Nothing to do.
                 end
+            else
+                -- Nothing to do.
             end
         end
     end
@@ -1890,7 +1857,7 @@ main_local_vs_setup = multi_func(function()
     make_local_gpanels(P2, "000000")
     
     for i=1, 30 do
-        gprint(to_print,300, 280)
+        gprint(to_print,X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
     end
     
@@ -1916,6 +1883,8 @@ function main_local_vs()
             if not P1.game_over and not P2.game_over then
                 P1:local_run()
                 P2:local_run()
+            else
+                -- Nothing to do.
             end
         end)
         
@@ -1925,10 +1894,14 @@ function main_local_vs()
             end_text = "P2 wins ^^"
         elseif P2.game_over and P2.CLOCK <= P1.CLOCK then
             end_text = "P1 wins ^^"
+        else
+            -- Nothing to do.
         end
         
         if end_text then
             return main_dumb_transition, {main_select_mode, end_text, 45}
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -1938,7 +1911,7 @@ end
 -- @treturn function
 -- @return fuction main_caracter_select
 function main_local_vs_yourself_setup()
-    my_name = config.name or "Player 1"
+    my_name = CONFIG_TABLE.name or "Player 1"
     op_name = nil
     op_state = nil
     character_select_mode = "1p_vs_yourself"
@@ -1968,6 +1941,8 @@ function main_local_vs_yourself()
 
         if end_text then
             return main_dumb_transition, {main_character_select, end_text, 45}
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -2005,6 +1980,8 @@ function main_replay_vs()
         else
             matchType = "Casual"
         end
+    else
+        -- Nothing to do.
     end
 
     P1:starting_state()
@@ -2012,9 +1989,11 @@ function main_replay_vs()
     
     local end_text = nil
     local run = true
-    local op_name_y = 40
+    local op_name_y = nil
     if string.len(my_name) > 12 then
         op_name_y = 55
+    else
+        op_name_y = 40
     end
     
     while true do
@@ -2030,28 +2009,42 @@ function main_replay_vs()
                 str = str .. "\n".. k .. ": " .. tostring(v)
             end
             gprint(str, 350, 400)
+        else
+            -- Nothing to do.
         end
         
         coroutine_wait()
         if this_frame_keys["escape"] then
             return main_select_mode
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["return"] then
             run = not run
+        else
+            -- Nothing to do.
         end
       
         if this_frame_keys["\\"] then
             run = false
+        else
+            -- Nothing to do.
         end
         
         if run or this_frame_keys["\\"] then
             if not P1.game_over then
                 P1:foreign_run()
+            else
+                -- Nothing to do.
             end
             if not P2.game_over then
                 P2:foreign_run()
+            else
+                -- Nothing to do.
             end
+        else
+            -- Nothing to do.
         end
         
         if P1.game_over and P2.game_over and P1.CLOCK == P2.CLOCK then
@@ -2060,7 +2053,7 @@ function main_replay_vs()
             if replay.P2_name and replay.P2_name ~= "anonymous" then
                 end_text = replay.P2_name .. " wins"
             else
-            end_text = "P2 wins"
+                end_text = "P2 wins"
             end
         elseif P2.game_over and P2.CLOCK <= P1.CLOCK then
             if replay.P1_name and replay.P1_name ~= "anonymous" then
@@ -2072,6 +2065,8 @@ function main_replay_vs()
         
         if end_text then
             return main_dumb_transition, {main_select_mode, end_text}
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -2087,6 +2082,8 @@ function main_replay_endless()
     if replay == nil or replay.speed == nil then
         return main_dumb_transition,
             {main_select_mode, "I don't have an endless replay :("}
+    else
+        -- Nothing to do.
     end
     
     P1 = Stack(1, "endless", replay.speed, replay.difficulty)
@@ -2103,22 +2100,32 @@ function main_replay_endless()
         coroutine_wait()
         if this_frame_keys["escape"] then
             return main_select_mode
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["return"] then
             run = not run
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["\\"] then
             run = false
+        else
+            -- Nothing to do.
         end
         
         if run or this_frame_keys["\\"] then
             if P1.game_over then
             --  @todo proper game over.
                 return main_dumb_transition, {main_select_mode, "You scored " .. P1.score}
+            else
+                -- Nothing to do.
             end
             P1:foreign_run()
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -2131,6 +2138,8 @@ function main_replay_puzzle()
     if replay.in_buf == nil or replay.in_buf == "" then
       return main_dumb_transition,
         {main_select_mode, "I don't have a puzzle replay :("}
+    else
+        -- Nothing to do.
     end
     
     P1 = Stack(1, "puzzle")
@@ -2147,19 +2156,27 @@ function main_replay_puzzle()
                     str = str .. "\n" .. k .. ": " .. tostring(v)
                 end
             gprint(str, 350, 400)
+        else
+            -- Nothing to do.
         end
         
         coroutine_wait()
         if this_frame_keys["escape"] then
             return main_select_mode
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["return"] then
             run = not run
+        else
+            -- Nothing to do.
         end
         
         if this_frame_keys["\\"] then
             run = false
+        else
+            -- Nothing to do.
         end
         
         if run or this_frame_keys["\\"] then
@@ -2169,9 +2186,15 @@ function main_replay_puzzle()
                     return main_dumb_transition, {main_select_mode, "You win!"}
                 elseif P1.puzzle_moves == 0 then
                     return main_dumb_transition, {main_select_mode, "You lose :("}
+                else
+                    -- Nothing to do.
                 end
+            else
+                -- Nothing to do.
             end
             P1:foreign_run()
+        else
+            -- Nothing to do.
         end
     end
 end
@@ -2191,6 +2214,8 @@ function make_main_puzzle(puzzles)
         
         if awesome_idx == nil then
             awesome_idx = math.random(#puzzles)
+        else
+            -- Nothing to do.
         end
         
         P1:set_puzzle_state(unpack(puzzles[awesome_idx]))
@@ -2204,19 +2229,28 @@ function make_main_puzzle(puzzles)
                 if P1:puzzle_done() then
                     awesome_idx = (awesome_idx % #puzzles) + 1
                     write_replay_file()
-                if awesome_idx == 1 then
-                    return main_dumb_transition, {main_select_puzz, "You win!"}
-                else
-                    return main_dumb_transition, {ret, "You win!"}
+                    if awesome_idx == 1 then
+                        return main_dumb_transition, {main_select_puzz, "You win!"}
+                    else
+                        return main_dumb_transition, {ret, "You win!"}
                 end
-            elseif P1.puzzle_moves == 0 then
-                write_replay_file()
-                return main_dumb_transition, {main_select_puzz, "You lose :("}
-            end
-        end
+                elseif P1.puzzle_moves == 0 then
+                    write_replay_file()
+                    return main_dumb_transition, {main_select_puzz, "You lose :("}
+                else
+                    -- Nothing to do.
+                end
+            else
+                -- Nothing to do.
+            end 
         run_function_as_60hz(function() 
             if P1.n_active_panels ~= 0 or P1.prev_active_panels ~= 0 or
-                P1.puzzle_moves ~= 0 then P1:local_run() end end)
+                P1.puzzle_moves ~= 0 then
+                    P1:local_run()
+                else
+                    -- Nothing to do.
+                end
+            end)
         end
     end
     return ret
@@ -2247,22 +2281,24 @@ do
                 to_print = to_print .. "   " .. menu_options[i][1] .. "\n"
             end
             
-            gprint(arrow, 300, 280)
-            gprint(to_print, 300, 280)
+            gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+            gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
             coroutine_wait()
             
-            if menu_key_up(k) then
+            if MENU_KEY_UP(k) then
                 active_idx = wrap(1, active_idx-1, #menu_options)
-            elseif menu_key_down(k) then
+            elseif MENU_KEY_DOWN(k) then
                 active_idx = wrap(1, active_idx+1, #menu_options)
-            elseif menu_key_enter(k) then
+            elseif MENU_KEY_ENTER(k) then
                 return menu_options[active_idx][2], menu_options[active_idx][3]
-            elseif menu_key_escape(k) then
+            elseif MENU_KEY_ESCAPE(k) then
                 if active_idx == #menu_options then
                     return menu_options[active_idx][2], menu_options[active_idx][3]
                 else
                     active_idx = #menu_options
                 end
+            else
+                -- Nothing to do.
             end
         end
     end
@@ -2300,9 +2336,9 @@ function main_config_input()
             to_print2 = to_print2 .. "                  " .. menu_options[i][2] .. "\n"
         end
         
-        gprint(arrow, 300, 280)
-        gprint(to_print, 300, 280)
-        gprint(to_print2, 300, 280)
+        gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
+        gprint(to_print2, X_STRING_CENTER, Y_STRING_CENTER)
     end
     
     local function set_key(idx)
@@ -2317,6 +2353,8 @@ function main_config_input()
                 if val then
                     k[key_names[idx]] = key
                     brk = true
+                else
+                    -- Nothing to do.
                 end
             end
         end
@@ -2327,17 +2365,17 @@ function main_config_input()
         get_items()
         print_stuff()
         coroutine_wait()
-          if menu_key_up(keyboard[1]) then
+          if MENU_KEY_UP(keyboard[1]) then
             active_idx = wrap(1, active_idx - 1, #menu_options)
-          elseif menu_key_down(keyboard[1]) then
+          elseif MENU_KEY_DOWN(keyboard[1]) then
             active_idx = wrap(1, active_idx + 1, #menu_options)
-          elseif menu_key_left(keyboard[1]) then
+          elseif MENU_KEY_LEFT(keyboard[1]) then
             active_player = wrap(1, active_player - 1, 2)
             k=keyboard[active_player]
-          elseif menu_key_right(keyboard[1]) then
+          elseif MENU_KEY_RIGHT(keyboard[1]) then
             active_player = wrap(1, active_player + 1, 2)
             k=keyboard[active_player]
-          elseif menu_key_enter(keyboard[1]) then
+          elseif MENU_KEY_ENTER(keyboard[1]) then
             if active_idx <= #key_names then
                   set_key(active_idx)
                   write_key_file()
@@ -2349,7 +2387,7 @@ function main_config_input()
             else
                   return menu_options[active_idx][3], menu_options[active_idx][4]
             end
-          elseif menu_key_escape(keyboard[1]) then
+          elseif MENU_KEY_ESCAPE(keyboard[1]) then
             if active_idx == #menu_options then
                   return menu_options[active_idx][3], menu_options[active_idx][4]
             else
@@ -2369,8 +2407,8 @@ function main_options()
     local function get_items()
     local save_replays_publicly_choices = {"with my name", "anonymously", "not at all"}
 
-    assets_dir_before_options_menu = config.assets_dir or default_assets_dir
-    sounds_dir_before_options_menu = config.sounds_dir or default_sounds_dir
+    assets_dir_before_options_menu = CONFIG_TABLE.assets_dir or default_assets_dir
+    sounds_dir_before_options_menu = CONFIG_TABLE.sounds_dir or default_sounds_dir
     -- make so we can get "anonymously" from save_replays_publicly_choices["anonymously"]
     for k,v in ipairs(save_replays_publicly_choices) do
         save_replays_publicly_choices[v] = v
@@ -2381,7 +2419,9 @@ function main_options()
     for k,v in ipairs(raw_assets_dir_list) do
         if love.filesystem.isDirectory("assets/"..v) and v ~= "Example folder structure" then
             asset_sets[#asset_sets + 1] = v
-          end
+        else
+            -- Nothing to do.
+        end
     end
 
     local raw_sounds_dir_list = love.filesystem.getDirectoryItems("sounds")
@@ -2389,7 +2429,9 @@ function main_options()
     for k,v in ipairs(raw_sounds_dir_list) do
         if love.filesystem.isDirectory("sounds/"..v) and v ~= "Example folder structure" then
             sound_sets[#sound_sets + 1] = v
-          end
+        else
+            -- Nothing to do.
+        end
     end
 
     print("asset_sets:")
@@ -2402,19 +2444,19 @@ function main_options()
         --options menu table reference:
         --{[1]"Option Name", [2]current or default value, [3]type, [4]min or bool value or choices_table,
         -- [5]max, [6]sound_source, [7]selectable, [8]next_func, [9]play_while selected}
-        {"Master Volume", config.master_volume or 100, "numeric", 0, 100, sounds.music.characters["lip"].normal_music, 
+        {"Master Volume", CONFIG_TABLE.master_volume or 100, "numeric", 0, 100, sounds.music.characters["lip"].normal_music, 
                 true, nil, true},
-        {"SFX Volume", config.SFX_volume or 100, "numeric", 0, 100, sounds.SFX.cur_move, true},
-        {"Music Volume", config.music_volume or 100, "numeric", 0, 100, sounds.music.characters["lip"].normal_music, 
+        {"SFX Volume", CONFIG_TABLE.SFX_volume or 100, "numeric", 0, 100, sounds.SFX.cur_move, true},
+        {"Music Volume", CONFIG_TABLE.music_volume or 100, "numeric", 0, 100, sounds.music.characters["lip"].normal_music, 
                 true, nil, true},
-        {"Debug Mode", debug_mode_text[config.debug_mode or false], "bool", false, nil, nil,false},
+        {"Debug Mode", debug_mode_text[CONFIG_TABLE.debug_mode or false], "bool", false, nil, nil,false},
         {"Save replays publicly", 
-            save_replays_publicly_choices[config.save_replays_publicly]
+            save_replays_publicly_choices[CONFIG_TABLE.save_replays_publicly]
             or save_replays_publicly_choices["with my name"],
             "multiple choice", save_replays_publicly_choices},
-        {"Graphics set", config.assets_dir or default_assets_dir, "multiple choice", asset_sets},
+        {"Graphics set", CONFIG_TABLE.assets_dir or default_assets_dir, "multiple choice", asset_sets},
         {"About custom graphics", "", "function", nil, nil, nil, nil, show_custom_graphics_readme},
-        {"Sounds set", config.sounds_dir or default_sounds_dir, "multiple choice", sound_sets},
+        {"Sounds set", CONFIG_TABLE.sounds_dir or default_sounds_dir, "multiple choice", sound_sets},
         {"About custom sounds", "", "function", nil, nil, nil, nil, show_custom_sounds_readme},
         {"Back", "", nil, nil, nil, nil, false, main_select_mode}
     }
@@ -2442,13 +2484,15 @@ function main_options()
             to_print2 = to_print2 .. menu_options[i][2] 
             if active_idx == i and selected then
                   to_print2 = to_print2 .. " >"
+            else
+                -- Nothing to do.
             end
             
             to_print2 = to_print2 .. "\n"
           end
-        gprint(arrow, 300, 280)
-        gprint(to_print, 300, 280)
-        gprint(to_print2, 300, 280)
+        gprint(arrow, X_STRING_CENTER, Y_STRING_CENTER)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
+        gprint(to_print2, X_STRING_CENTER, Y_STRING_CENTER)
     end
 
     --- 
@@ -2456,17 +2500,21 @@ function main_options()
         if menu_options[active_idx][3] == "numeric" then
             if menu_options[active_idx][2] > menu_options[active_idx][4] then --value > minimum
                   menu_options[active_idx][2] = menu_options[active_idx][2] - 1
+            else
+                -- Nothing to do.
             end
           elseif menu_options[active_idx][3] == "multiple choice" then
             adjust_backwards = true
             adjust_active_value = true
           end
-      --the following is enough for "bool"
+          --the following is enough for "bool"
           adjust_active_value = true
           if menu_options[active_idx][6] and not menu_options[active_idx][9] then
             --sound_source for this menu item exists and not play_while_selected
             menu_options[active_idx][6]:stop()
             menu_options[active_idx][6]:play()
+          else
+            -- Nothing to do.
           end
     end
 
@@ -2475,10 +2523,14 @@ function main_options()
         if menu_options[active_idx][3] == "numeric" then
             if menu_options[active_idx][2] < menu_options[active_idx][5] then --value < maximum
                   menu_options[active_idx][2] = menu_options[active_idx][2] + 1
+            else
+                -- Nothing to do.
             end
-          elseif menu_options[active_idx][3] == "multiple choice" then
+        elseif menu_options[active_idx][3] == "multiple choice" then
             adjust_active_value = true
-          end
+        else
+            -- Nothing to do.
+        end
       --the following is enough for "bool"
       adjust_active_value = true
 
@@ -2486,7 +2538,9 @@ function main_options()
             --sound_source for this menu item exists and not play_while_selected
             menu_options[active_idx][6]:stop()
             menu_options[active_idx][6]:play()
-          end
+        else
+            -- Nothing to do.
+        end
     end
 
     get_items()
@@ -2496,15 +2550,15 @@ function main_options()
         --get_items()
         print_stuff()
         coroutine_wait()
-        if menu_key_up(keyboard[1]) and not selected then
+        if MENU_KEY_UP(keyboard[1]) and not selected then
             active_idx = wrap(1, active_idx-1, #menu_options)
-          elseif menu_key_down(keyboard[1]) and not selected then
+          elseif MENU_KEY_DOWN(keyboard[1]) and not selected then
             active_idx = wrap(1, active_idx+1, #menu_options)
-          elseif menu_key_left(keyboard[1]) and (selected or not menu_options[active_idx][7]) then --or not selectable
+          elseif MENU_KEY_LEFT(keyboard[1]) and (selected or not menu_options[active_idx][7]) then --or not selectable
             adjust_left()
-          elseif menu_key_right(keyboard[1]) and (selected or not menu_options[active_idx][7]) then --or not selectable
+          elseif MENU_KEY_RIGHT(keyboard[1]) and (selected or not menu_options[active_idx][7]) then --or not selectable
             adjust_right()
-          elseif menu_key_enter(keyboard[1]) then
+          elseif MENU_KEY_ENTER(keyboard[1]) then
             if menu_options[active_idx][7] then --is selectable
                   selected = not selected
               if not selected then
@@ -2518,7 +2572,7 @@ function main_options()
         elseif active_idx == #menu_options then
               return exit_options_menu
         end
-          elseif menu_key_escape(keyboard[1]) then
+          elseif MENU_KEY_ESCAPE(keyboard[1]) then
             if selected then
                   selected = not selected
                   deselected_this_frame = true
@@ -2532,30 +2586,30 @@ function main_options()
         if adjust_active_value then
             if menu_options[active_idx][3] == "bool" then
                   if active_idx == 4 then
-                    config.debug_mode = not config.debug_mode
-                    menu_options[active_idx][2] = debug_mode_text[config.debug_mode or false]
+                    CONFIG_TABLE.debug_mode = not CONFIG_TABLE.debug_mode
+                    menu_options[active_idx][2] = debug_mode_text[CONFIG_TABLE.debug_mode or false]
                   end
-              --add any other bool config updates here
+            --add any other bool config updates here
             elseif menu_options[active_idx][3] == "numeric" then
-                  if config.master_volume ~= menu_options[1][2] then
-                    config.master_volume = menu_options[1][2]
-                    love.audio.setVolume(config.master_volume / 100)
+                  if CONFIG_TABLE.master_volume ~= menu_options[1][2] then
+                    CONFIG_TABLE.master_volume = menu_options[1][2]
+                    love.audio.setVolume(CONFIG_TABLE.master_volume / 100)
                   end
-                if config.SFX_volume ~= menu_options[2][2] then --SFX volume should be updated
-                    config.SFX_volume = menu_options[2][2]
-                    menu_options[2][6]:setVolume(config.SFX_volume / 100) --do just the one sound effect until we deselect
+                if CONFIG_TABLE.SFX_volume ~= menu_options[2][2] then --SFX volume should be updated
+                    CONFIG_TABLE.SFX_volume = menu_options[2][2]
+                    menu_options[2][6]:setVolume(CONFIG_TABLE.SFX_volume / 100) --do just the one sound effect until we deselect
                 end
                 if active_idx == 2 and deselected_this_frame then --SFX Volume
-                    set_volume(sounds.SFX, config.SFX_volume / 100)
+                    set_volume(sounds.SFX, CONFIG_TABLE.SFX_volume / 100)
                 end
-                if config.music_volume ~= menu_options[3][2] then --music volume should be updated
-                    config.music_volume = menu_options[3][2]
-                    menu_options[3][6]:setVolume(config.music_volume / 100) --do just the one music source until we deselect
+                if CONFIG_TABLE.music_volume ~= menu_options[3][2] then --music volume should be updated
+                    CONFIG_TABLE.music_volume = menu_options[3][2]
+                    menu_options[3][6]:setVolume(CONFIG_TABLE.music_volume / 100) --do just the one music source until we deselect
                 end
                   if active_idx == 3 and deselected_this_frame then --Music Volume
-                    set_volume(sounds.music, config.music_volume / 100) 
+                    set_volume(sounds.music, CONFIG_TABLE.music_volume / 100) 
                   end
-          --add any other numeric config updates here
+            --add any other numeric config updates here
             elseif menu_options[active_idx][3] == "multiple choice" then
                   local active_choice_num = 1
                   --find the key for the currently selected choice
@@ -2574,11 +2628,11 @@ function main_options()
             end
               
               if active_idx == 5 then
-                config.save_replays_publicly = menu_options[active_idx][2]
+                CONFIG_TABLE.save_replays_publicly = menu_options[active_idx][2]
               elseif active_idx == 6 then
-                config.assets_dir = menu_options[active_idx][2]
+                CONFIG_TABLE.assets_dir = menu_options[active_idx][2]
               elseif active_idx == 8 then
-                config.sounds_dir = menu_options[active_idx][2]
+                CONFIG_TABLE.sounds_dir = menu_options[active_idx][2]
               end
           --add any other multiple choice config updates here
         end
@@ -2600,7 +2654,7 @@ function main_options()
                 do_menu_function = false
                 coroutine_wait()
 
-                if menu_key_escape(keyboard[1]) or menu_key_enter(keyboard[1]) then
+                if MENU_KEY_ESCAPE(keyboard[1]) or MENU_KEY_ENTER(keyboard[1]) then
                       break;
                 end
               end
@@ -2620,7 +2674,7 @@ function main_options()
                 gprint(custom_sounds_readme, 30, 150)      
                 do_menu_function = false
                 coroutine_wait()
-                if menu_key_escape(keyboard[1]) or menu_key_enter(keyboard[1]) then
+                if MENU_KEY_ESCAPE(keyboard[1]) or MENU_KEY_ENTER(keyboard[1]) then
                     break;
                 end
               end
@@ -2648,18 +2702,18 @@ end
 -- @tparam nil
 -- @treturn nil
 function exit_options_menu()
-    gprint("writing config to file...", 300, 280)
+    gprint("writing config to file...", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     write_conf_file()
-    if config.assets_dir ~= assets_dir_before_options_menu then
-        gprint("reloading graphics...", 300, 305)
+    if CONFIG_TABLE.assets_dir ~= assets_dir_before_options_menu then
+        gprint("reloading graphics...", X_STRING_CENTER, 305)
         coroutine_wait()
         graphics_init()
     end
 
     assets_dir_before_options_menu = nil
-    if config.sounds_dir ~= sounds_dir_before_options_menu then
-        gprint("reloading sounds...", 300, 305)
+    if CONFIG_TABLE.sounds_dir ~= sounds_dir_before_options_menu then
+        gprint("reloading sounds...", X_STRING_CENTER, 305)
         coroutine_wait()
         sound_init()
     end
@@ -2675,14 +2729,14 @@ function main_set_name()
     local name = ""
     while true do
         local to_print = "Enter your name:\n" .. name
-        gprint(to_print, 300, 280)
+        gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
         if this_frame_keys["escape"] then
             return main_select_mode
         end
 
         if this_frame_keys["return"] or this_frame_keys["kenter"] then
-            config.name = name
+            CONFIG_TABLE.name = name
             write_conf_file()
             return main_select_mode
         end
@@ -2755,9 +2809,9 @@ function main_dumb_transition(next_func, text, timemin, timemax)
         -- end
         -- @todo anything else we should be listening for during main_dumb_transition?
       -- end
-        gprint(text, 300, 280)
+        gprint(text, X_STRING_CENTER, Y_STRING_CENTER)
         coroutine_wait()
-        if t >= timemin and (t >=timemax or (menu_key_enter(k) or menu_key_escape(k))) then
+        if t >= timemin and (t >=timemax or (MENU_KEY_ENTER(k) or MENU_KEY_ESCAPE(k))) then
             return next_func
         end
         
@@ -2777,9 +2831,9 @@ function write_char_sel_settings_to_file()
         if not closing then
             coroutine_wait()
         end
-        config.character = my_state.character
-        config.level = my_state.level
-        config.ranked = my_state.ranked
+        CONFIG_TABLE.character = my_state.character
+        CONFIG_TABLE.level = my_state.level
+        CONFIG_TABLE.ranked = my_state.ranked
         write_conf_file()
     end
 end

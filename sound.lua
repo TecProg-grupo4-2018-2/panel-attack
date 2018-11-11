@@ -1,10 +1,12 @@
 --- Sound module
 --- Handle sound effects, stage and charactes themes and volume of the game
 
+require("constants")
+
 --  This function sets the volume of a single source or table of sources
 function set_volume(source, new_volume)
     -- Conditional with debug purposes
-    if config.debug_mode then print("set_volume called") end
+    if CONFIG_TABLE.debug_mode then print("set_volume called") end
     if type(source) == "table" then
       for _,volume in pairs(source) do
         set_volume(volume, new_volume)
@@ -59,29 +61,29 @@ function find_character_SFX(character, SFX_sound_name)
       -- Conditionals to check tha directories has specific sound effects
       -- SFXSounName probably a misspelled global variable
       if SFXSounName == "chain" and current_directory_has_chain_sound then 
-        if config.debug_mode then print("loaded "..SFX_sound_name.." for "..character) end
+        if CONFIG_TABLE.debug_mode then print("loaded "..SFX_sound_name.." for "..character) end
         return current_directory_has_chain_sound
       end
       if SFX_sound_name == "combo" and current_directory_has_combo_sound then 
-        if config.debug_mode then print("loaded "..SFX_sound_name.." for "..character) end
+        if CONFIG_TABLE.debug_mode then print("loaded "..SFX_sound_name.." for "..character) end
         return current_directory_has_combo_sound
       elseif SFX_sound_name == "combo" and current_directory_has_chain_sound then
-        if config.debug_mode then print("substituted found chain SFX for "..SFX_sound_name.." for "..character) end
+        if CONFIG_TABLE.debug_mode then print("substituted found chain SFX for "..SFX_sound_name.." for "..character) end
         return current_directory_has_chain_sound -- in place of the combo SFX
       end
       if SFX_sound_name == "chain" and current_directory_has_combo_sound then
-        if config.debug_mode then print("substituted found combo SFX for "..SFX_sound_name.." for "..character) end
+        if CONFIG_TABLE.debug_mode then print("substituted found combo SFX for "..SFX_sound_name.." for "..character) end
         return current_directory_has_combo_sound
       end
     
       if other_requested_SFX then
-        if config.debug_mode then print("loaded "..SFX_sound_name.." for "..character) end
+        if CONFIG_TABLE.debug_mode then print("loaded "..SFX_sound_name.." for "..character) end
         return other_requested_SFX
       else
-        if config.debug_mode then print("did not find "..SFX_sound_name.." for "..character.." in current directory: "..current_dir) end
+        if CONFIG_TABLE.debug_mode then print("did not find "..SFX_sound_name.." for "..character.." in current directory: "..current_dir) end
       end
       if current_directory_has_chain_sound or current_directory_has_combo_sound --[[and we didn't find the requested SFX in this dir]] then
-        if config.debug_mode then print("chain or combo was provided, but "..SFX_sound_name.." was not.") end
+        if CONFIG_TABLE.debug_mode then print("chain or combo was provided, but "..SFX_sound_name.." was not.") end
         return nil -- don't continue looking in other fallback directories,
     -- else
       -- keep looking
@@ -101,9 +103,9 @@ function find_music(character, music_type)
     if character_theme_overrides_stage_theme then
       found_source = check_supported_extensions("sounds/"..sounds_dir.."/characters/"..character.."/"..music_type)
       if found_source then
-        if config.debug_mode then print("In selected sound directory, found "..music_type.." for "..character) end
+        if CONFIG_TABLE.debug_mode then print("In selected sound directory, found "..music_type.." for "..character) end
       else
-        if config.debug_mode then print("In selected sound directory, did not find "..music_type.." for "..character) end
+        if CONFIG_TABLE.debug_mode then print("In selected sound directory, did not find "..music_type.." for "..character) end
       end
       return found_source
     else
@@ -112,18 +114,18 @@ function find_music(character, music_type)
         if soundSetOverridesDefaultSoundSet then
           found_source = check_supported_extensions("sounds/"..sounds_dir.."/music/"..stages[character].."/"..music_type)
           if found_source then
-            if config.debug_mode then print("In selected sound directory stages, found "..music_type.." for "..character) end
+            if CONFIG_TABLE.debug_mode then print("In selected sound directory stages, found "..music_type.." for "..character) end
           
           else
-            if config.debug_mode then print("In selected sound directory stages, did not find "..music_type.." for "..character) end
+            if CONFIG_TABLE.debug_mode then print("In selected sound directory stages, did not find "..music_type.." for "..character) end
           end
           return found_source
         else
           found_source = check_supported_extensions("sounds/"..default_sounds_dir.."/music/"..stages[character].."/"..music_type)
           if found_source then
-            if config.debug_mode then print("In default sound directory stages, found "..music_type.." for "..character) end
+            if CONFIG_TABLE.debug_mode then print("In default sound directory stages, found "..music_type.." for "..character) end
           else
-            if config.debug_mode then print("In default sound directory stages, did not find "..music_type.." for "..character) end
+            if CONFIG_TABLE.debug_mode then print("In default sound directory stages, did not find "..music_type.." for "..character) end
           end
           return found_source
         end
@@ -206,7 +208,7 @@ end
 -- This function initializes the sounds and sets variables with sound effects used all over other functions in this file
 function sound_init()
     default_sounds_dir = "Stock PdP_TA"
-    sounds_dir = config.sounds_dir or default_sounds_dir
+    sounds_dir = CONFIG_TABLE.sounds_dir or default_sounds_dir
     -- sounds: SFX, music
     -- globlal variables
     SFX_Fanfare_Play = 0
@@ -264,7 +266,7 @@ function sound_init()
     end
     assert_requirements_met()
   
-    love.audio.setVolume(config.master_volume/100)
-    set_volume(sounds.SFX, config.SFX_volume/100)
-    set_volume(sounds.music, config.music_volume/100) 
+    love.audio.setVolume(CONFIG_TABLE.master_volume/100)
+    set_volume(sounds.SFX, CONFIG_TABLE.SFX_volume/100)
+    set_volume(sounds.music, CONFIG_TABLE.music_volume/100) 
   end

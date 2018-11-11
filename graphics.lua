@@ -4,6 +4,7 @@
 -- @module graphics 
 
 require("input")
+require("constants")
 
 --- upload image file and returns drawn image
 -- @function load_img
@@ -15,13 +16,13 @@ function load_img(image_path)
     
     -- if the path doesn't exist, creates the path 
     function creates_image()
-        img = love.image.newImageData("assets/"..(config.assets_dir or
+        img = love.image.newImageData("assets/"..(CONFIG_TABLE.assets_dir or
                                         default_assets_dir).."/"..image_path)
     end
 
     if pcall(creates_image) then
-        if config.assets_dir and config.assets_dir ~= default_assets_dir then
-            print("loaded custom asset: "..config.assets_dir.."/"..image_path)
+        if CONFIG_TABLE.assets_dir and CONFIG_TABLE.assets_dir ~= default_assets_dir then
+            print("loaded custom asset: "..CONFIG_TABLE.assets_dir.."/"..image_path)
         end
     else
         img = love.image.newImageData("assets/"..default_assets_dir.."/"..
@@ -316,7 +317,7 @@ function graphics_init()
     character_display_names = {} -- players names 
 
     for k, original_name in ipairs(characters) do -- show names
-        local file_name = "assets/"..config.assets_dir.."/"..original_name
+        local file_name = "assets/"..CONFIG_TABLE.assets_dir.."/"..original_name
                             .."/name.txt"
         local name_txt_file = love.filesystem.newFile(file_name)
         local open_success, err = name_txt_file:open("r")
@@ -371,7 +372,7 @@ function Stack.render(self)
     local ceil = math.ceil --rounding 
     local mouse_x, mouse_y -- coordinates of mouse
     
-    if config.debug_mode then
+    if CONFIG_TABLE.debug_mode then
         mouse_x, mouse_y = love.mouse.getPosition()
         mouse_x = mouse_y / GFX_SCALE
         mouse_y = mouse_y / GFX_SCALE
@@ -470,7 +471,7 @@ function Stack.render(self)
                     end
 
                     -- this adds the drawing of state flags to garbage panels 
-                    if config.debug_mode then
+                    if CONFIG_TABLE.debug_mode then
                         gprint(panel.state, draw_x*3, draw_y*3)
                         gprint(panel.chaining and "chaining" or "nah", 
                                 draw_x*3, draw_y*3+30)
@@ -518,7 +519,7 @@ function Stack.render(self)
 
                     draw(IMG_panels[panel.color][draw_frame], draw_x, draw_y)
 
-                    if config.debug_mode then
+                    if CONFIG_TABLE.debug_mode then
                         gprint(panel.state, draw_x*3, draw_y*3)
                         if panel.match_anyway ~= nil then
                             gprint(tostring(panel.match_anyway), draw_x*3, 
@@ -534,7 +535,7 @@ function Stack.render(self)
                 end
             end
 
-            if config.debug_mode and mx >= draw_x and mx < draw_x + 16 and 
+            if CONFIG_TABLE.debug_mode and mx >= draw_x and mx < draw_x + 16 and 
                     my >= draw_y and my < draw_y + 16 then
                 mouse_panel = {row, col, panel}
                 draw(IMG_panels[4][1], draw_x+16/3, draw_y+16/3, 0, 0.33333333,
@@ -575,7 +576,7 @@ function Stack.render(self)
         gprint("Stop: "..self.stop_time, self.score_x, 205)
         gprint("Pre stop: "..self.pre_stop_time, self.score_x, 220)
 
-        if config.debug_mode then
+        if CONFIG_TABLE.debug_mode then
             gprint("cleared: "..(self.panels_cleared or 0), self.score_x, 265)
             gprint("metal q: "..(self.metal_panels_queued or 0), self.score_x, 280)
 
