@@ -4,7 +4,10 @@
   --  . the main game routine
   --    (rising, timers, falling, cursor movement, swapping, landing)
   --  . the matches-checking routine
-  
+
+-- import logging system
+log = require("log")
+
 local min, pairs, deepcpy = math.min, pairs, deepcpy
 local max = math.max
 local garbage_bounce_time = #garbage_bounce_table
@@ -13,29 +16,33 @@ local clone_pool = {}
 
   -- Stack of panels
 Stack = class(function(self, which, mode, speed, difficulty, player_number)
-	assert(which, "Which param nil") 
-	assert(mode, "Mode must exists") 
+	assert(which, "Which param nil")
+	assert(mode, "Mode must exists")
 	self.character = uniformly(characters)
 	assert(self.character, "There are no characters")
 	self.max_health = 1
 	self.mode = mode or "endless"
-	assert(self.mode, "Game mode is not selected") 
+	assert(self.mode, "Game mode is not selected")
+	log.trace("Starting stacking")
 
 	if mode ~= "puzzle" then
 		self.do_first_row = true
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
 
 	if self.mode == "endless" then
+	        log.trace("Entered Endless mode")
 		self.NCOLORS = difficulty_to_ncolors_endless[difficulty]
-		assert(self.NCOLORS, "NCOLORS can't be nil") 
-	elseif self.mode == "time" then  
+		assert(self.NCOLORS, "NCOLORS can't be nil")
+	elseif self.mode == "time" then
+	        log.trace("Entered Time mode")
 		self.NCOLORS = difficulty_to_ncolors_1Ptime[difficulty]
-		assert(self.NCOLORS, "NCOLORS can't be nil") 
-	elseif self.mode == "2ptime" or self.mode == "vs" then 
+		assert(self.NCOLORS, "NCOLORS can't be nil")
+	elseif self.mode == "2ptime" or self.mode == "vs" then
+	        log.trace("Entered Verus/2ptime mode")
 		local level = speed or 5
-		assert(level, "Level can't be nil") 
+		assert(level, "Level can't be nil")
 		self.character = (type(difficulty) == "string") and difficulty or self.character
 		self.level = level
 		speed = level_to_starting_speed[level]
@@ -44,16 +51,16 @@ Stack = class(function(self, which, mode, speed, difficulty, player_number)
 			15*60,
 			idx=1,
 			delta=15*60
-		} 
-		self.max_health = assert(level_to_hang_time[level], "max_health can't be nil") 
-		self.FRAMECOUNT_HOVER  = assert(level_to_hover[self.level], "FRAMECOUNT_HOVER can't be nil") 
-		self.FRAMECOUNT_FLASH  = assert(level_to_flash[self.level],  "FRAMECOUNT_FLASH can't be nil") 
-		self.FRAMECOUNT_FACE   = assert(level_to_face[self.level], "FRAMECOUNT_FACE can't be nil") 
-		self.FRAMECOUNT_POP    = assert(level_to_pop[self.level], "FRAMECOUNT_POP can't be nil") 
-		self.combo_constant    = assert(level_to_combo_constant[self.level], "combo_constant can't be nil") 
-		self.combo_coefficient = assert(level_to_combo_coefficient[self.level], "combo_coefficient can't be nil") 
-		self.chain_constant    = assert(level_to_chain_constant[self.level], "chain_constant can't be nil") 
-		self.chain_coefficient = assert(level_to_chain_coefficient[self.level], "chain_coefficient can't be nil") 
+		}
+		self.max_health = assert(level_to_hang_time[level], "max_health can't be nil")
+		self.FRAMECOUNT_HOVER  = assert(level_to_hover[self.level], "FRAMECOUNT_HOVER can't be nil")
+		self.FRAMECOUNT_FLASH  = assert(level_to_flash[self.level],  "FRAMECOUNT_FLASH can't be nil")
+		self.FRAMECOUNT_FACE   = assert(level_to_face[self.level], "FRAMECOUNT_FACE can't be nil")
+		self.FRAMECOUNT_POP    = assert(level_to_pop[self.level], "FRAMECOUNT_POP can't be nil")
+		self.combo_constant    = assert(level_to_combo_constant[self.level], "combo_constant can't be nil")
+		self.combo_coefficient = assert(level_to_combo_coefficient[self.level], "combo_coefficient can't be nil")
+		self.chain_constant    = assert(level_to_chain_constant[self.level], "chain_constant can't be nil")
+		self.chain_coefficient = assert(level_to_chain_coefficient[self.level], "chain_coefficient can't be nil")
 		if self.mode == "2ptime" then
 			self.NCOLORS = level_to_ncolors_time[level]
 		else
@@ -61,10 +68,12 @@ Stack = class(function(self, which, mode, speed, difficulty, player_number)
 		end
 		assert(self.NCOLORS, "NCOLORS can't be nil")
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
+
+	log.trace("Setting attributes")
 	self.health = self.max_health
-	
+
 	self.garbage_cols = {
 		{1,2,3,4,5,6,idx=1},
 		{1,3,5,idx=1},
@@ -72,7 +81,7 @@ Stack = class(function(self, which, mode, speed, difficulty, player_number)
 		{1,2,3,idx=1},
 		{1,2,idx=1},
 		{1,idx=1}
-	} 
+	}
 	self.later_garbage = {}
 	self.garbage_q = Queue()
 	-- garbage_to_send[frame] is an array of garbage to send at frame.
@@ -93,11 +102,11 @@ Stack = class(function(self, which, mode, speed, difficulty, player_number)
 			self.panels[i][j] = Panel()
 		end
 	end
-	
+
 	self.CLOCK = 0
-	
+
 	self.max_runs_per_frame = 3
-	
+
 	self.displacement = 16
 	-- This variable indicates how far below the top of the play
 	-- area the top row of panels actually is.
@@ -106,52 +115,53 @@ Stack = class(function(self, which, mode, speed, difficulty, player_number)
 	-- it's reset to 15, all the panels are moved up one row,
 	-- and a new row is generated at the bottom.
 	-- Only when the displacement is 0 are all 12 rows "in play."
-	
+
 	self.danger_col = {false,false,false,false,false,false}
 	-- set true if this column is near the top
 	self.danger_timer = 0 -- decides bounce frame when in danger
-	
-	self.difficulty = assert(difficulty or 2) 
+
+	self.difficulty = assert(difficulty or 2)
 
 	self.speed = assert(speed or 1, "speed must exists") -- The player's speed level decides the amount of time
 	-- the stack takes to rise automatically
 	if self.speed_times == nil then
+	        log.trace("Setting speed_times")
 		self.panels_to_speedup = panels_to_next_speed[self.speed]
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
 
 	self.rise_timer = 1 -- When this value reaches 0, the stack will rise a pixel
 	self.rise_lock = false -- If the stack is rise locked, it won't rise until it is
 	-- unlocked.
 	self.has_risen = false -- set once the stack rises once during the game
-	
+
 	self.stop_time = 0
 	self.pre_stop_time = 0
-	
+
 	self.NCOLORS = self.NCOLORS or 5
 	self.score = 0 -- der skore
 	self.chain_counter = 0 -- how high is the current chain?
-	
+
 	self.panels_in_top_row = false -- boolean, for losing the game
 	self.danger = self.danger or false -- boolean, panels in the top row (danger)
 	self.danger_music = self.danger_music or false -- changes music state
-	
+
 	self.n_active_panels = 0
 	self.prev_active_panels = 0
 	self.n_chain_panels= 0
-	
+
 	-- These change depending on the difficulty and speed levels:
-	self.FRAMECOUNT_HOVER = assert(self.FRAMECOUNT_HOVER or FC_HOVER[self.difficulty]) 
-	self.FRAMECOUNT_FLASH = assert(self.FRAMECOUNT_FLASH or FC_FLASH[self.difficulty]) 
-	self.FRAMECOUNT_FACE  = assert(self.FRAMECOUNT_FACE or FC_FACE[self.difficulty]) 
-	self.FRAMECOUNT_POP   = assert(self.FRAMECOUNT_POP or FC_POP[self.difficulty]) 
-	self.FRAMECOUNT_MATCH = assert(self.FRAMECOUNT_FACE + self.FRAMECOUNT_FLASH) 
-	self.FRAMECOUNT_RISE  = assert(speed_to_rise_time[self.speed]) 
-	assert(self.FRAMECOUNT_RISE > 0) 
-	self.rise_timer = assert(self.FRAMECOUNT_RISE) 
-	assert(self.rise_timer > 0) 
-	
+	self.FRAMECOUNT_HOVER = assert(self.FRAMECOUNT_HOVER or FC_HOVER[self.difficulty])
+	self.FRAMECOUNT_FLASH = assert(self.FRAMECOUNT_FLASH or FC_FLASH[self.difficulty])
+	self.FRAMECOUNT_FACE  = assert(self.FRAMECOUNT_FACE or FC_FACE[self.difficulty])
+	self.FRAMECOUNT_POP   = assert(self.FRAMECOUNT_POP or FC_POP[self.difficulty])
+	self.FRAMECOUNT_MATCH = assert(self.FRAMECOUNT_FACE + self.FRAMECOUNT_FLASH)
+	self.FRAMECOUNT_RISE  = assert(speed_to_rise_time[self.speed])
+	assert(self.FRAMECOUNT_RISE > 0)
+	self.rise_timer = assert(self.FRAMECOUNT_RISE)
+	assert(self.rise_timer > 0)
+
 	-- Player input stuff:
 	self.manual_raise = false -- set until raising is completed
 	self.manual_raise_yet = false -- if not set, no actual raising's been done yet
@@ -159,7 +169,7 @@ Stack = class(function(self, which, mode, speed, difficulty, player_number)
 	self.prevent_manual_raise = false
 	self.swap_1 = false -- attempt to initiate a swap on this frame
 	self.swap_2 = false
-	
+
 	self.cur_wait_time = 25 -- number of ticks to wait before the cursor begins
 	-- to move quickly... it's based on P1CurSensitivity
 	self.cur_timer = 0 -- number of ticks for which a new direction's been pressed
@@ -167,26 +177,28 @@ Stack = class(function(self, which, mode, speed, difficulty, player_number)
 	self.cur_row = 7 -- the row the cursor's on
 	self.cur_col = 3 -- the column the left half of the cursor's on
 	self.top_cur_row = self.height + (self.mode == "puzzle" and 0 or -1)
-	
+
 	self.move_sound = false -- this is set if the cursor movement sound should be played
-	self.poppedPanelIndex = assert(self.poppedPanelIndex or 1) 
-	self.panels_cleared = assert(self.panels_cleared or 0) 
+	self.poppedPanelIndex = assert(self.poppedPanelIndex or 1)
+	self.panels_cleared = assert(self.panels_cleared or 0)
 	self.metal_panels_queued = assert(self.metal_panels_queued or 0)
-	self.lastPopLevelPlayed = assert(self.lastPopLevelPlayed or 1) 
-	self.lastPopIndexPlayed = assert(self.lastPopIndexPlayed or 1) 
+	self.lastPopLevelPlayed = assert(self.lastPopLevelPlayed or 1)
+	self.lastPopIndexPlayed = assert(self.lastPopIndexPlayed or 1)
 	self.game_over = false
-	
+
 	self.card_q = Queue()
-	
+
 	self.which = assert(which or 1)  -- Pk.which == k
 	self.player_number = assert(player_number or self.which)  -- player number according to the multiplayer server, for game outcome reporting
-	
+
 	self.shake_time = 0
-	
+
 	self.prev_states = {}
+	log.trace("Attributes settings finished.")
 end)
 
 function Stack.mkcpy(self, other)
+	log.trace("make copy called")
 	if other == nil then
 		if #clone_pool == 0 then
 			other = {}
@@ -195,7 +207,7 @@ function Stack.mkcpy(self, other)
 			clone_pool[#clone_pool] = nil
 		end
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
 	other.do_swap = self.do_swap
 	other.speed = self.speed
@@ -208,17 +220,17 @@ function Stack.mkcpy(self, other)
 			other.garbage_idxs[i]=self.garbage_cols[i].idx
 		end
 	else
-		
+
 	end--]]
 	other.garbage_q = deepcpy(self.garbage_q)
 	other.garbage_to_send = deepcpy(self.garbage_to_send)
 	other.input_state = self.input_state
 	local height = self.height or other.height
-	assert(height >= 0, "The height must be positive") 
+	assert(height >= 0, "The height must be positive")
 	local width = self.width or other.width
-	assert(width >= 0, "The width must be positive") 
+	assert(width >= 0, "The width must be positive")
 	local height_to_cpy = #self.panels
-	assert(height_to_cpy >= 0) 
+	assert(height_to_cpy >= 0)
 	other.panels = other.panels or {}
 
 	for i=1,height_to_cpy do
@@ -268,6 +280,7 @@ function Stack.mkcpy(self, other)
 	other.cur_col = self.cur_col
 	other.shake_time = self.shake_time
 	other.card_q = deepcpy(self.card_q)
+	log.trace("Finished making copy")
 	return assert(other)
 end
 
@@ -281,6 +294,7 @@ Panel = class(function(p)
 end)
 
 function Panel.clear(self)
+    log.trace("Panel clearing")
 	-- color 0 is an empty panel.
 	-- colors 1-7 are normal colors, 8 is [!].
 	self.color = 0
@@ -297,7 +311,7 @@ function Panel.clear(self)
 		-- causing the swap to end 3 frames later.
 		-- The timer is also used to offset the panel's
 		-- position on the screen.
-		
+
 	self.initial_time = nil
 	self.pop_time = nil
 	self.pop_index = nil
@@ -307,11 +321,11 @@ function Panel.clear(self)
 	self.height = nil
 	self.garbage = nil
 	self.metal = nil
-	
+
 	-- Also flags
 	self:clear_flags()
 end
-	
+
 -- states:
 -- swapping, matched, popping, popped, hovering,
 -- falling, dimmed, landing, normal
@@ -321,7 +335,7 @@ end
 -- chaining
 
 -- do TODO is it really necessary?
-local exclude_hover_set = { 
+local exclude_hover_set = {
 	matched=true,
 	popping=true,
 	popped=true,
@@ -333,7 +347,7 @@ function Panel.exclude_hover(self)
 	return exclude_hover_set[self.state] or self.garbage
 end
 
-local exclude_match_set = { 
+local exclude_match_set = {
 	swapping=true,
 	matched=true,
 	popping=true,
@@ -341,15 +355,16 @@ local exclude_match_set = {
 	dimmed=true,
 	falling=true
 }
+
 function Panel.exclude_match(self)
-	if(exclude_match_set[self.state]) then  
+	if(exclude_match_set[self.state]) then
 		return exclude_match_set[self.state]
 	elseif (self.color == 0) or (self.color == 9) then
 		return self.color
 	elseif (self.state == "hovering" and not self.match_anyway) then
 		return (self.state == "hovering" and not self.match_anyway)
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
 end
 
@@ -359,10 +374,10 @@ local exclude_swap_set = {
 	popped=true,
 	hovering=true,
 	dimmed=true
-} 
+}
 
 function Panel.exclude_swap(self)
-	if (exclude_swap_set[self.state]) then  
+	if (exclude_swap_set[self.state]) then
 		return exclude_swap_set[self.state]
 	elseif (self.dont_swap) then
 		return self.dont_swap
@@ -379,7 +394,7 @@ end
 -- "falling-ness should not propogate up through this panel"
 -- We need this because garbage doesn't hover, it just falls
 -- opportunistically.
-local block_garbage_fall_set = { 
+local block_garbage_fall_set = {
 	matched=true,
 	popping=true,
 	popped=true,
@@ -394,7 +409,6 @@ end
 function Panel.dangerous(self)
 	return self.color ~= 0 and (self.state ~= "falling" or not self.garbage)
 end
--- end
 
 function Panel.has_flags(self)
 	return self.state ~= "normal" or self.is_swapping_from_left
@@ -402,6 +416,7 @@ function Panel.has_flags(self)
 end
 
 function Panel.clear_flags(self)
+	log.trace("Panel clear flags called")
 	self.combo_index = nil
 	self.combo_size = nil
 	self.chain_index = nil
@@ -431,7 +446,7 @@ function Stack.set_puzzle_state(self, pstr, n_turns)
 	self.puzzle_moves = n_turns
 	stop_character_sounds(self.character)
 end
-	
+
 function Stack.puzzle_done(self)
 	local panels = self.panels
 	for row=1, self.height do
@@ -440,13 +455,13 @@ function Stack.puzzle_done(self)
 			if color ~= 0 and color ~= 9 then
 				return false
 			else
-				-- nothing to do 
+				-- nothing to do
 			end
 		end
 	end
 	return true
 end
-	
+
 function Stack.has_falling_garbage(self)
 	for i=1,self.height+3 do -- we shouldn't have to check quite 3 rows above height, but just to make sure...
 		local prow = self.panels[i]
@@ -454,14 +469,15 @@ function Stack.has_falling_garbage(self)
 			if prow and prow[j].garbage and prow[j].state == "falling" then
 				return true
 			else
-				-- nothing to do 
+				-- nothing to do
 			end
 		end
 	end
 	return false
 end
-	
+
 function Stack.prep_rollback(self)
+	log.info("Preparing for rollback")
 	-- Do stuff for rollback.
 	local prev_states = self.prev_states
 	-- prev_states will not exist if we're doing a rollback right now
@@ -475,35 +491,38 @@ function Stack.prep_rollback(self)
 		self.prev_states = assert(prev_states)
 		self.garbage_target = garbage_target
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
 end
-	
+
 function Stack.starting_state(self, n)
+	log.info("Stack starting state")
 	if self.do_first_row then
 		self.do_first_row = nil
 		for i=1,(n or 8) do
 			self:new_row()
-			self.cur_row = assert(self.cur_row-1) 
+			self.cur_row = assert(self.cur_row-1)
 		end
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
 	stop_character_sounds(self.character)
 end
-	
+
 function Stack.prep_first_row(self)
+	log.info("Stack preparing first row")
 	if self.do_first_row then
 		self.do_first_row = nil
 		self:new_row()
-		self.cur_row = assert(self.cur_row-1) 
+		self.cur_row = assert(self.cur_row-1)
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
 end
-	
+
 -- local_run is for the stack that belongs to this client.
 function Stack.local_run(self)
+	log.info("Stack local run")
 	self:update_cards()
 	self.input_state = self:send_controls()
 	self:prep_rollback()
@@ -511,20 +530,21 @@ function Stack.local_run(self)
 	self:prep_first_row()
 	self:PdP()
 end
-	
+
 -- foreign_run is for a stack that belongs to another client.
 function Stack.foreign_run(self)
-	local times_to_run = min( 
+	log.info("Stack foreign run")
+	local times_to_run = min(
 		string.len(self.input_buffer),
 		self.max_runs_per_frame
 	)
 
-	assert(times_to_run, "string times_to_run must exists") 
-	if self.play_to_end and string.len(self.input_buffer) < 4 then 
+	assert(times_to_run, "string times_to_run must exists")
+	if self.play_to_end and string.len(self.input_buffer) < 4 then
 		self.play_to_end = nil
 		stop_sounds = true
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
 
 	for i=1,times_to_run do
@@ -537,9 +557,10 @@ function Stack.foreign_run(self)
 		self.input_buffer = string.sub(self.input_buffer, 2)
 	end
 end
-	
+
 function Stack.enqueue_card(self, chain, x, y, n)
-	self.card_q:push({ 
+	log.info("Stack Enqueue card")
+	self.card_q:push({
 		frame=1,
 		chain=chain,
 		x=x,
@@ -547,39 +568,39 @@ function Stack.enqueue_card(self, chain, x, y, n)
 		n=n
 	})
 end
-	
-local d_col = { 
+
+local d_col = {
 	up=0,
 	down=0,
 	left=-1,
 	right=1
 }
 
-local d_row = { 
+local d_row = {
 	up=1,
 	down=-1,
 	left=0,
 	right=0
 }
-	
+
 -- The engine routine.
 function Stack.PdP(self)
-	
+	log.info("Stack PdP")
 	local panels = self.panels
 	local width = self.width
-	assert(width > 0) 
+	assert(width > 0)
 	local height = self.height
-	assert(height > 0) 
+	assert(height > 0)
 	local prow = nil
 	local panel = nil
 	local swapped_this_frame = nil
-		
+
 	if self.pre_stop_time ~= 0 then
-		self.pre_stop_time = assert(self.pre_stop_time - 1) 
+		self.pre_stop_time = assert(self.pre_stop_time - 1)
 	elseif self.stop_time ~= 0 then
 		self.stop_time = assert(self.stop_time - 1)
 	end
-		
+
 	self.panels_in_top_row = false
 	local top_row = self.height -- self.displacement%16==0 and self.height or self.height-1
 	prow = panels[top_row]
@@ -587,10 +608,10 @@ function Stack.PdP(self)
 		if prow[idx]:dangerous() then
 			self.panels_in_top_row = true
 		else
-			-- nothing to do 
+			-- nothing to do
 		end
 	end
-		
+
 	-- calculate which columns should bounce
 	local prev_danger = self.danger
 	self.danger = false
@@ -611,9 +632,9 @@ function Stack.PdP(self)
 			self.danger_timer = 17
 		end
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
-	
+
 	-- determine whether to play danger music
 	local prev_danger_music = self.danger_music
 	self.danger_music = false
@@ -623,7 +644,7 @@ function Stack.PdP(self)
 		if prow[idx].garbage and prow[idx].state == "falling" then
 			falling_garbage_in_top_two_rows = true
 		else
-			-- nothing to do 
+			-- nothing to do
 		end
 	end
 
@@ -632,7 +653,7 @@ function Stack.PdP(self)
 		if prow[idx].garbage and prow[idx].state == "falling" then
 			falling_garbage_in_top_two_rows = true
 		else
-			-- nothing to do 
+			-- nothing to do
 		end
 	end
 
@@ -648,20 +669,20 @@ function Stack.PdP(self)
 	end
 
 	if self.displacement == 0 and self.has_risen then
-		self.top_cur_row = assert(self.height) 
+		self.top_cur_row = assert(self.height)
 		self:new_row()
 	end
-		
+
 	self.rise_lock = self.n_active_panels ~= 0 or
 					self.prev_active_panels ~= 0 or
 					self.shake_time ~= 0
-	
+
 	-- Increase the speed if applicable
 	if self.speed_times then
 		local time = self.speed_times[self.speed_times.idx]
 		if self.CLOCK == time then
 			self.speed = min(self.speed + 1, 99)
-			assert(self.speed > 0) 
+			assert(self.speed > 0)
 			if self.speed_times.idx ~= #self.speed_times then
 				self.speed_times.idx = assert(self.speed_times.idx + 1)
 			else
@@ -670,18 +691,18 @@ function Stack.PdP(self)
 		end
 	elseif self.panels_to_speedup <= 0 then
 		self.speed = self.speed + 1
-		assert(self.speed > 0) 
+		assert(self.speed > 0)
 		self.panels_to_speedup = assert(self.panels_to_speedup +
-		panels_to_next_speed[self.speed]) 
+		panels_to_next_speed[self.speed])
 		self.FRAMECOUNT_RISE = speed_to_rise_time[self.speed]
 	end
-		
+
 	-- Phase 0 //////////////////////////////////////////////////////////////
 	-- Stack automatic rising
 	if self.speed ~= 0 and not self.manual_raise and self.stop_time == 0
 	and not self.rise_lock and self.mode ~= "puzzle" then
 		if self.panels_in_top_row then
-			self.health = assert(self.health - 1) 
+			self.health = assert(self.health - 1)
 			if self.health == 0 and self.shake_time == 0 then
 				self.game_over = true
 			end
@@ -691,33 +712,33 @@ function Stack.PdP(self)
 				self.displacement = self.displacement - 1
 				if self.displacement == 0 then
 					self.prevent_manual_raise = false
-					self.top_cur_row = assert(self.height) 
+					self.top_cur_row = assert(self.height)
 					self:new_row()
 				end
-				self.rise_timer = assert(self.rise_timer + self.FRAMECOUNT_RISE) 
+				self.rise_timer = assert(self.rise_timer + self.FRAMECOUNT_RISE)
 			end
 		end
 	end
-		
+
 	if not self.panels_in_top_row then
 		self.health = self.max_health
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
-	
+
 	if self.displacement % 16 ~= 0 then
-		self.top_cur_row = assert(self.height - 1) 
+		self.top_cur_row = assert(self.height - 1)
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
-		
+
 	-- Begin the swap we input last frame.
 	if self.do_swap then
 		self:swap()
 		swapped_this_frame = true
 		self.do_swap = nil
 	end
-		
+
 	-- Look for matches.
 	self:check_matches()
 	-- Clean up the value we're using to match newly hovering panels
@@ -727,8 +748,8 @@ function Stack.PdP(self)
 			panels[row][col].match_anyway = nil
 		end
 	end
-		
-		
+
+
 	-- Phase 2. /////////////////////////////////////////////////////////////
 	-- Timer-expiring actions + falling
 	local propogate_fall = {false,false,false,false,false,false}
@@ -740,15 +761,15 @@ function Stack.PdP(self)
 			local cntinue = false
 			if skip_col > 0 then
 				skip_col = skip_col - 1
-				assert(skip_col >= 0) 
+				assert(skip_col >= 0)
 				cntinue=true
 			else
-				-- nothing to do 
+				-- nothing to do
 			end
 			panel = panels[row][col]
-			if panel.garbage then 
+			if panel.garbage then
 				if panel.state == "matched" then
-					panel.timer = assert(panel.timer - 1) 
+					panel.timer = assert(panel.timer - 1)
 					if panel.timer == panel.pop_time then
 						SFX_Garbage_Pop_Play = panel.pop_index
 					end
@@ -763,7 +784,7 @@ function Stack.PdP(self)
 							panel.state = "normal"
 						end
 					end
-					-- try to fall
+			    -- try to fall
 				elseif (panel.state=="normal" or panel.state=="falling") then
 					if panel.x_offset==0 then
 						local prow = panels[row-1]
@@ -788,7 +809,7 @@ function Stack.PdP(self)
 								propogate_fall[x] = true
 								panels[row][x].state = "falling"
 								panels[row-1][x], panels[row][x] = panels[row][x], panels[row-1][x]
-							end  
+							end
 						end
 					end
 
@@ -796,7 +817,7 @@ function Stack.PdP(self)
 						if row <= self.height then
 							if panel.height > 3 then
 								SFX_GarbageThud_Play = 3
-							else 
+							else
 								SFX_GarbageThud_Play = panel.height
 							end
 							shake_time = max(shake_time, panel.shake_time)
@@ -822,7 +843,7 @@ function Stack.PdP(self)
 					panel.state = "landing"
 					panel.timer = 12
 					SFX_Land_Play=1;
-					
+
 					-- if there's a panel below, this panel's gonna land
 					-- unless the panel below is falling.
 				elseif panels[row-1][col].color ~= 0 and
@@ -836,7 +857,7 @@ function Stack.PdP(self)
 						panel.state = "landing"
 						panel.timer = 12
 					end
-					
+
 					SFX_Land_Play=1;
 				else
 					panels[row-1][col], panels[row][col] =
@@ -863,10 +884,10 @@ function Stack.PdP(self)
 									-- it will begin to hover.
 									-- CRAZY BUG EMULATION:
 									-- the space it was swapping from hovers too
-									if from_left and panels[row][col-1].state == "falling" then 
+									if from_left and panels[row][col-1].state == "falling" then
 										self:set_hoverers(row,col-1,
 											self.FRAMECOUNT_HOVER,false,true)
-									elseif panels[row][col+1].state == "falling" then 
+									elseif panels[row][col+1].state == "falling" then
 										self:set_hoverers(row,col+1,
 											self.FRAMECOUNT_HOVER+1,false,false)
 									end
@@ -917,7 +938,7 @@ function Stack.PdP(self)
 						-- Now it's invisible, but sits and waits
 						-- for the last panel in the combo to pop
 						-- before actually being removed.
-						
+
 						-- If it is the last panel to pop,
 						-- it should be removed immediately!
 						if panel.combo_size == panel.combo_index then
@@ -925,7 +946,7 @@ function Stack.PdP(self)
 
 							if self.mode == "vs" and self.panels_cleared % level_to_metal_panel_frequency[self.level] == 0 then
 								self.metal_panels_queued = assert(self.metal_panels_queued + 1)
-							else  
+							else
 								-- nothing to do
 							end
 
@@ -934,8 +955,8 @@ function Stack.PdP(self)
 							panel.color=0;
 
 							if(panel.chaining) then
-								self.n_chain_panels = assert(self.n_chain_panels - 1) 
-							else   
+								self.n_chain_panels = assert(self.n_chain_panels - 1)
+							else
 								-- nothing to do
 							end
 
@@ -949,22 +970,22 @@ function Stack.PdP(self)
 							self.panels_cleared = assert(self.panels_cleared + 1)
 
 							if self.mode == "vs" and self.panels_cleared % level_to_metal_panel_frequency[self.level] == 0 then
-								self.metal_panels_queued = assert(self.metal_panels_queued + 1) 
+								self.metal_panels_queued = assert(self.metal_panels_queued + 1)
 							end
 
 							SFX_Pop_Play = 1
 							self.poppedPanelIndex = panel.combo_index
 						end
-							
+
 					elseif panel.state == "popped" then
 						-- It's time for this panel
 						-- to be gone forever :'(
 						if self.panels_to_speedup then
-							self.panels_to_speedup = assert(self.panels_to_speedup - 1) 
+							self.panels_to_speedup = assert(self.panels_to_speedup - 1)
 						end
 
 						if panel.chaining then
-							self.n_chain_panels = assert(self.n_chain_panels - 1) 
+							self.n_chain_panels = assert(self.n_chain_panels - 1)
 						end
 
 						panel.color = 0
@@ -984,15 +1005,15 @@ function Stack.PdP(self)
 			end
 		end
 	end
-		
+
 	local prev_shake_time = self.shake_time
 	self.shake_time = assert(self.shake_time - 1)
 	self.shake_time = max(self.shake_time, shake_time)
-	assert(shake_time >= 0) 
-		
+	assert(shake_time >= 0)
+
 	-- Phase 3. /////////////////////////////////////////////////////////////
 	-- Actions performed according to player input
-	
+
 	-- CURSOR MOVEMENT
 	self.move_sound = true
 	if self.cur_dir and (self.cur_timer == 0 or
@@ -1003,22 +1024,22 @@ function Stack.PdP(self)
 			self.top_cur_row)
 		self.cur_col = bound(1, self.cur_col + d_col[self.cur_dir],
 			width - 1)
-		if(self.move_sound and 
+		if(self.move_sound and
 			(self.cur_timer == 0 or self.cur_timer == self.cur_wait_time) and
 			(self.cur_row ~= prev_row or self.cur_col ~= prev_col)) then
-				
-			SFX_Cur_Move_Play=1 
+
+			SFX_Cur_Move_Play=1
 		end
 	else
 		self.cur_row = bound(1, self.cur_row, self.top_cur_row)
 	end
 
 	if self.cur_timer ~= self.cur_wait_time then
-		self.cur_timer = assert(self.cur_timer + 1) 
+		self.cur_timer = assert(self.cur_timer + 1)
 	else
-		-- nothing to do 
+		-- nothing to do
 	end
-		
+
 	-- SWAPPING
 	if (self.swap_1 or self.swap_2) and not swapped_this_frame then
 		local row = self.cur_row
@@ -1053,21 +1074,21 @@ function Stack.PdP(self)
 			(panels[row-1][col].color ~= 0 or
 			panels[row-1][col+1].color ~= 0))
 		else
-			-- nothing to do 
+			-- nothing to do
 		end
-			
+
 		do_swap = do_swap and (self.puzzle_moves == nil or self.puzzle_moves > 0)
-		
+
 		if do_swap then
 			self.do_swap = true
 		else
-			-- nothing to do 
+			-- nothing to do
 		end
 
 		self.swap_1 = false
 		self.swap_2 = false
 	end
-		
+
 	-- MANUAL STACK RAISING
 	if self.manual_raise and self.mode ~= "puzzle" then
 		if not self.rise_lock then
@@ -1083,7 +1104,7 @@ function Stack.PdP(self)
 			if self.displacement == 1 then
 				self.manual_raise = false
 				self.rise_timer = 1
-				
+
 				if not self.prevent_manual_raise then
 					self.score = self.score + 1
 				end
@@ -1099,19 +1120,19 @@ function Stack.PdP(self)
 		-- if the stack is rise locked when you press the raise button,
 		-- the raising is cancelled
 	end
-		
+
 	-- if at the end of the routine there are no chain panels, the chain ends.
 	if self.chain_counter ~= 0 and self.n_chain_panels == 0 then
 		self:set_chain_garbage(self.chain_counter)
 		SFX_Fanfare_Play = self.chain_counter
 		self.chain_counter=0
 	end
-	
+
 	if(self.score>99999) then
 		self.score=99999
 		-- lol owned
 	end
-		
+
 	self.prev_active_panels = self.n_active_panels
 	self.n_active_panels = 0
 	for row=1,self.height do
@@ -1126,14 +1147,14 @@ function Stack.PdP(self)
 			end
 		end
 	end
-	
+
 	local to_send = self.garbage_to_send[self.CLOCK]
-	
+
 	if to_send then
 		self.garbage_to_send[self.CLOCK] = nil
-		
+
 		-- if there's no chain, we can send it
-		if self.chain_counter == 0 and (#to_send > 0) then 
+		if self.chain_counter == 0 and (#to_send > 0) then
 			table.sort(to_send, function(a,b)
 				if a[4] or b[4] then
 					return a[4] and not b[4]
@@ -1153,9 +1174,9 @@ function Stack.PdP(self)
 			self.garbage_to_send.chain = to_send
 		end
 	end
-		
+
 	self:remove_extra_rows()
-	
+
 	local garbage = self.later_garbage[self.CLOCK]
 	if garbage then
 		for i=1,#garbage do
@@ -1164,7 +1185,7 @@ function Stack.PdP(self)
 	end
 
 	self.later_garbage[self.CLOCK-409] = nil
-		
+
 	-- double-check panels_in_top_row
 	self.panels_in_top_row = false
 	local prow = panels[top_row]
@@ -1176,7 +1197,7 @@ function Stack.PdP(self)
 		end
 	end
 
-	local garbage_fits_in_populated_top_row 
+	local garbage_fits_in_populated_top_row
 	if self.garbage_q:len() > 0 and self.panels_in_top_row then
 		-- even if there are some panels in the top row,
 		-- check if the next block in the garbage_q would fit anyway
@@ -1201,10 +1222,10 @@ function Stack.PdP(self)
 	if drop_it and self.garbage_q:len() > 0 then
 		self:drop_garbage(unpack(self.garbage_q:pop()))
 	end
-		
+
 	-- Play Sounds / music
 	if not music_mute and not (P1 and P1.play_to_end) and not (P2 and P2.play_to_end) then
-		
+
 		if (self.danger_music or (self.garbage_target and self.garbage_target.danger_music)) then -- may have to rethink this bit if we do more than 2 players
 			if sounds.music.characters[winningPlayer().character].normal_music_start then
 				sounds.music.characters[winningPlayer().character].normal_music_start:stop()
@@ -1248,7 +1269,7 @@ function Stack.PdP(self)
 			if normal_music_intro_finished or not sounds.music.characters[winningPlayer().character].normal_music_start or (normal_music_intro_started and not sounds.music.characters[winningPlayer().character].normal_music_start:isPlaying()) then
 				normal_music_intro_started = nil
 				normal_music_intro_finished = true
-				
+
 				sounds.music.characters[winningPlayer().character].normal_music:setLooping(true)
 				sounds.music.characters[winningPlayer().character].normal_music:play()
 			end
@@ -1298,7 +1319,7 @@ function Stack.PdP(self)
 			SFX_garbage_match_play = nil
 		end
 
-		if SFX_Fanfare_Play >= 6 then 
+		if SFX_Fanfare_Play >= 6 then
 			sounds.SFX.pops[self.lastPopLevelPlayed][self.lastPopIndexPlayed]:stop()
 			sounds.SFX.fanfare3:play()
 		elseif SFX_Fanfare_Play >= 5 then
@@ -1322,7 +1343,7 @@ function Stack.PdP(self)
 
 			if interrupted_thud and interrupted_thud > SFX_GarbageThud_Play then
 				sounds.SFX.garbage_thud[interrupted_thud]:play()
-			else 
+			else
 				sounds.SFX.garbage_thud[SFX_GarbageThud_Play]:play()
 			end
 			SFX_GarbageThud_Play = 0
@@ -1351,26 +1372,26 @@ function Stack.PdP(self)
 			love.audio.stop()
 			stop_sounds = nil
 		end
-		
+
 		if self.game_over or (self.garbage_target and self.garbage_target.game_over) then
 			SFX_GameOver_Play = 1
 		end
 	end
-	
+
 	self.CLOCK = self.CLOCK + 1
 	assert(self.CLOCK)
 end
-		
+
 function winningPlayer()
 	if not P2 then
 		return P1
 	elseif op_win_count > my_win_count then
 		return P2
-	else 
+	else
 		return P1
 	end
 end
-		
+
 function Stack.swap(self)
 	local panels = self.panels
 	assert(panels)
@@ -1395,12 +1416,12 @@ function Stack.swap(self)
 	panels[row][col+1].state = "swapping"
 	panels[row][col+1].is_swapping_from_left = true
 	panels[row][col+1].chaining = tmp_chaining
-	
+
 	panels[row][col].timer = 4
 	panels[row][col+1].timer = 4
-	
+
 	SFX_Swap_Play=1;
-			
+
 	-- If you're swapping a panel into a position
 	-- above an empty space or above a falling piece
 	-- then you can't take it back since it will start falling.
@@ -1416,7 +1437,7 @@ function Stack.swap(self)
 			panels[row][col+1].dont_swap = true
 		end
 	end
-				
+
 	-- If you're swapping a blank space under a panel,
 	-- then you can't swap it back since the panel should
 	-- start falling.
@@ -1428,12 +1449,12 @@ function Stack.swap(self)
 		end
 		if panels[row][col+1].color == 0 and
 			panels[row+1][col+1].color ~= 0 then
-				
+
 			panels[row][col+1].dont_swap = true
 		end
 	end
 end
-				
+
 function Stack.remove_extra_rows(self)
 	local panels = self.panels
 	local width = self.width
@@ -1451,9 +1472,10 @@ function Stack.remove_extra_rows(self)
 		end
 	end
 end
-				
+
 -- drops a width x height garbage.
 function Stack.drop_garbage(self, width, height, metal)
+	log.info("Stack drop garbage called")
 	local spawn_row = #self.panels
 
 	for i=#self.panels+1,#self.panels+height+1 do
@@ -1486,11 +1508,12 @@ function Stack.drop_garbage(self, width, height, metal)
 		end
 	end
 end
-				
+
 -- prepare to send some garbage!
 -- also, delay any combo garbage that wasn't sent out yet
 -- and set it to be sent at the same time as this garbage.
 function Stack.set_combo_garbage(self, n_combo, n_metal)
+	log.info("Stack set combo garbage")
 	local stuff_to_send = {}
 
 	for i=3,n_metal do
@@ -1513,7 +1536,7 @@ function Stack.set_combo_garbage(self, n_combo, n_metal)
 
 	self.garbage_to_send[self.CLOCK+100] = stuff_to_send
 end
-				
+
 -- the chain is over!
 -- let's send it and the stuff waiting on it.
 function Stack.set_chain_garbage(self, n_chain)
@@ -1535,18 +1558,18 @@ function Stack.set_chain_garbage(self, n_chain)
 
 	tab[#tab+1] = {6, n_chain-1, false, true}
 end
-				
+
 function Stack.really_send(self, to_send)
 	if self.garbage_target then
 		self.garbage_target:recv_garbage(self.CLOCK + GARBAGE_DELAY, to_send)
 	end
 end
-				
+
 function Stack.recv_garbage(self, time, to_recv)
 	if self.CLOCK > time then
 		local prev_states = self.prev_states
 		local next_self = prev_states[time+1]
-		
+
 		while next_self and (next_self.prev_active_panels ~= 0 or
 			next_self.n_active_panels ~= 0) do
 
@@ -1557,14 +1580,14 @@ function Stack.recv_garbage(self, time, to_recv)
 		if self.CLOCK - time > 200 then
 			error("Latency is too high :(")
 		else
-			
+
 			local CLOCK = self.CLOCK
 			local old_self = prev_states[time]
 			-- MAGICAL ROLLBACK!?!?
 			self.in_rollback = true
-			print("attempting magical rollback with difference = "..self.CLOCK-time..
+			log.info("attempting magical rollback with difference = "..self.CLOCK-time..
 			" at time "..self.CLOCK)
-			
+
 			-- The garbage that we send this time might (rarely) not be the same
 			-- as the garbage we sent before.  Wipe out the garbage we sent before...
 			local first_wipe_time = time + GARBAGE_DELAY
@@ -1577,7 +1600,7 @@ function Stack.recv_garbage(self, time, to_recv)
 			end
 
 			-- and record the garbage that we send this time!
-			
+
 			-- We can do it like this because the sender of the garbage
 			-- and self.garbage_target are the same thing.
 			-- Since we're in this code at all, we know that self.garbage_target
@@ -1587,10 +1610,10 @@ function Stack.recv_garbage(self, time, to_recv)
 			-- If a mode with >2 players is implemented, we can continue doing
 			-- the same thing as long as we keep all of the opponents'
 			-- stacks in sync.
-			
+
 			self:fromcpy(prev_states[time])
 			self:recv_garbage(time, to_recv)
-			
+
 			for t=time,CLOCK-1 do
 				self.input_state = prev_states[t].input_state
 				self:mkcpy(prev_states[t])
@@ -1608,8 +1631,9 @@ function Stack.recv_garbage(self, time, to_recv)
 
 	self.later_garbage[time] = garbage
 end
-					
+
 function Stack.check_matches(self)
+	log.trace("Check Matches called")
 	local row = 0
 	local col = 0
 	local count = 0
@@ -1627,14 +1651,13 @@ function Stack.check_matches(self)
 	local metal_count = 0
 	assert(type(is_chain) ~= "string")
 
-						
 	-- iterate over panel matrix
 	for col=1,self.width do
 		for row=1,self.height do
 			panels[row][col].matching = nil
 		end
 	end
-						
+
 	-- iterate over panel matrix
 	for row=1,self.height do
 		for col=1,self.width do
@@ -1687,7 +1710,7 @@ function Stack.check_matches(self)
 			end
 		end
 	end
-						
+
 	-- This is basically two flood fills at the same time.
 	-- One for clearing normal garbage, one for metal.
 	while q:len() ~= 0 do
@@ -1725,7 +1748,7 @@ function Stack.check_matches(self)
 			end
 		end
 	end
-						
+
 	if is_chain then
 		if self.chain_counter ~= 0 then
 			self.chain_counter = self.chain_counter + 1
@@ -1733,7 +1756,7 @@ function Stack.check_matches(self)
 			self.chain_counter = 2
 		end
 	end
-						
+
 	local pre_stop_time = self.FRAMECOUNT_MATCH +
 		self.FRAMECOUNT_POP * (combo_size + garbage_size)
 	local garbage_match_time = self.FRAMECOUNT_MATCH + garbage_bounce_time +
@@ -1823,7 +1846,7 @@ function Stack.check_matches(self)
 			end
 		end
 	end
-							
+
 	if(combo_size~=0) then
 		if(combo_size>3) then
 			if(score_mode == SCOREMODE_TA) then
@@ -1838,7 +1861,7 @@ function Stack.check_matches(self)
 					self.score = self.score + 20400+((combo_size-40)*800)
 				end
 			end
-			
+
 			self:enqueue_card(false, first_panel_col, first_panel_row, combo_size)
 			-- EnqueueConfetti(first_panel_col<<4+P1StackPosX+4,
 			--          first_panel_row<<4+P1StackPosY+self.displacement-9);
@@ -1902,7 +1925,7 @@ function Stack.check_matches(self)
 			-- @CardsOfTheHeart says there are 4 chain sfx: -- x2/x3, -- x4, -- x5 is x2/x3 with an echo effect, -- x6+ is x4 with an echo effect
 			if is_chain then
 				local length = min(self.chain_counter, 13)
-				if length < 4 then 
+				if length < 4 then
 					SFX_Buddy_Play = "chain"
 				elseif length == 4 then
 					SFX_Buddy_Play = "chain2"
@@ -1920,7 +1943,7 @@ function Stack.check_matches(self)
 		-- if garbage_size > 0 then
 		self.pre_stop_time = max(self.pre_stop_time, pre_stop_time)
 		-- end
-		
+
 		self.manual_raise=false
 		-- self.score_render=1;
 		-- Nope.
@@ -1933,7 +1956,7 @@ function Stack.check_matches(self)
 		self:set_combo_garbage(combo_size, metal_count)
 	end
 end
-	
+
 function Stack.set_hoverers(self, row, col, hover_time, add_chaining,
 	extra_tick, match_anyway, debug_tag)
 	assert(type(match_anyway) ~= "string")
@@ -1951,7 +1974,7 @@ function Stack.set_hoverers(self, row, col, hover_time, add_chaining,
 		if panel.color == 0 or panel:exclude_hover() or
 		panel.state == "hovering" and panel.timer <= hover_time then
 			brk = true
-		elseif panel.state == "swapping" then 
+		elseif panel.state == "swapping" then
 				hovers_time = hovers_time + panels[row][col].timer - 1
 		else
 			local chaining = panel.chaining
@@ -1975,7 +1998,7 @@ function Stack.set_hoverers(self, row, col, hover_time, add_chaining,
 			if adding_chaining then
 				self.n_chain_panels = self.n_chain_panels + 1
 			end
-		
+
 			not_first = 1
 		end
 
@@ -1983,8 +2006,9 @@ function Stack.set_hoverers(self, row, col, hover_time, add_chaining,
 		brk = brk or row > #self.panels
 	end
 end
-							
+
 function Stack.new_row(self)
+	log.trace("Stack new row called")
 	local panels = self.panels
 	-- move cursor up
 	self.cur_row = bound(1, self.cur_row + 1, self.top_cur_row)
@@ -1993,12 +2017,12 @@ function Stack.new_row(self)
 		panels[row] = panels[row-1]
 	end
 
-	panels[0]={}
+	panels[0] = {}
 	-- put bottom row into play
 	for col=1,self.width do
 		panels[1][col].state = "normal"
 	end
-	
+
 	if string.len(self.panel_buffer) < self.width then
 		error("Ran out of buffered panels.  Is the server down?")
 	end
@@ -2018,7 +2042,7 @@ function Stack.new_row(self)
 		panels[0][col] = panel
 		this_panel_color = string.sub(self.panel_buffer,col,col)
 		-- a capital letter for the place where the first shock block should spawn (if earned), and a lower case letter is where a second should spawn (if earned).  (color 8 is metal)
-		if this_panel_color >= "A" and this_panel_color <= "Z" then 
+		if this_panel_color >= "A" and this_panel_color <= "Z" then
 			if metal_panels_this_row > 0 then
 				this_panel_color = 8
 			else
@@ -2040,10 +2064,10 @@ function Stack.new_row(self)
 	if string.len(self.panel_buffer) <= 10*self.width then
 		ask_for_panels(string.sub(self.panel_buffer,-6))
 	end
-	
+
 	self.displacement = 16
 end
-	
+
 	--[[function quiet_cursor_movement()
 		if self.cur_timer == 0 then
 			return
