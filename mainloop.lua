@@ -4,6 +4,7 @@
 -- @module mainloop
 
 require("constants")
+log = require("log")
 
 local coroutine_wait = coroutine.yield
 local coroutine_resume = coroutine.resume
@@ -29,15 +30,22 @@ function load_game_resources()
 
     gprint("Reading config file", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
+    log.trace("Reading config file")
     read_conf_file() --  @todo stop making new config files
+
     gprint("Reading replay file", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
+    log.trace("Reading replay file")
     read_replay_file()
+
     gprint("Loading graphics...", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
+    log.trace("Loading graphics")
     graphics_init() -- loads images and sets up graphical components
+
     gprint("Loading sounds... (this takes a few seconds)", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
+    log.trace("Loading sounds")
     sound_init() -- loads sound components 
     
     -- i literally have no idea why this loop is this way
@@ -301,6 +309,7 @@ end
 --- Runs Endless mode
 -- @return transition function, table containing info about the end of the game
 function main_endless(...)
+    log.trace("Entering endless mode")
     consuming_timesteps = true
     replay.endless = {}
     
@@ -343,6 +352,7 @@ end
 -- @param ... players fuctions
 -- @return next load screen function
 function main_time_attack(...)
+    log.trace("Entering time attack mode")
     consuming_timesteps = true
     P1 = Stack(1, "time", ...)
 
@@ -385,6 +395,7 @@ end
 -- @tparam nil
 -- @treturn nil
 function main_character_select()
+    log.trace("Entering character select")
     love.audio.stop()
     local map = {}
 
@@ -420,6 +431,7 @@ function main_character_select()
                     end
                 end
 
+                log.warn("Connection lost, trying to rejoin")
                 gprint("Lost connection.  Trying to rejoin...", X_STRING_CENTER, Y_STRING_CENTER)
                 coroutine_wait()
                 do_messages()
@@ -456,6 +468,7 @@ function main_character_select()
         elseif my_player_number and my_player_number ~= 0 then
             print("We assumed our player number is still " .. my_player_number)
         else
+            log.error("Undefined number player")
             error("We never heard from the server as to what player number we are")
             print("Error: The server never told us our player number.  Assuming it is 1")
             my_player_number = 1
@@ -469,6 +482,7 @@ function main_character_select()
         elseif op_player_number and op_player_number ~= 0 then
             print("We assumed op player number is still " .. op_player_number)
         else
+            log.error("Undefined number player")
             error("We never heard from the server as to what player number we are")
             print("Error: The server never told us our player number.  Assuming it is 2")
             op_player_number = 2
@@ -594,6 +608,7 @@ function main_character_select()
     -- @tparam nil
     -- @treturn nil
     local function do_leave()
+        log.trace("Leaving the room")
         my_win_count = 0
         op_win_count = 0
         write_char_sel_settings_to_file()
@@ -801,7 +816,7 @@ function main_character_select()
         gprint(pstr, render_x + 6, render_y + y_add)
     end
 
-    print("got to LOC before net_vs_room character select loop")
+    logger.warn("got to LOC before net_vs_room character select loop")
     menu_clock = 0
     while true do
         menu_clock = menu_clock + 1
@@ -828,9 +843,11 @@ function main_character_select()
             
                 assert(message, "message is null")
                 if message.ranked_match_approved then
+                    log.info("Match type selected is ranked")
                     matchType = "Ranked"
                     match_type_message = ""
                 elseif message.ranked_match_denied then
+                    log.info("Match type selected is casual")
                     matchType = "Casual"
                     match_type_message = "Not ranked. "
                     if message.reasons then
@@ -935,11 +952,11 @@ function main_character_select()
                     or P1.gpanel_buffer == "" or P2.gpanel_buffer == "" do
                 --testing getting stuck here at "Game is starting"
                     game_start_timeout = game_start_timeout + 1
-                    print("game_start_timeout = " .. game_start_timeout)
-                    print("P1.panel_buffer = " .. P1.panel_buffer)
-                    print("P2.panel_buffer = " .. P2.panel_buffer)
-                    print("P1.gpanel_buffer = " .. P1.gpanel_buffer)
-                    print("P2.gpanel_buffer = " .. P2.gpanel_buffer)
+                    log.info("game_start_timeout = " .. game_start_timeout)
+                    log.info("P1.panel_buffer = " .. P1.panel_buffer)
+                    log.info("P2.panel_buffer = " .. P2.panel_buffer)
+                    log.info("P1.gpanel_buffer = " .. P1.gpanel_buffer)
+                    log.info("P2.gpanel_buffer = " .. P2.gpanel_buffer)
                     gprint(to_print, X_STRING_CENTER, Y_STRING_CENTER)
                     do_messages()
                     coroutine_wait()
@@ -1192,6 +1209,7 @@ end
 -- @tparam nil
 -- @return the next screen or main menu
 function main_net_vs_lobby()
+    log.trace("Entering net vs lobby")
     local active_name, active_idx, active_back = "", 1
     local menu_options = nil
     local unpaired_players = {} -- list
@@ -1214,6 +1232,7 @@ function main_net_vs_lobby()
     read_user_id_file()
 
     if not playerUsername then
+        log.warn("a user id is necessary")
         playerUsername = "need a new user id"
     end
 
@@ -1237,7 +1256,7 @@ function main_net_vs_lobby()
                     isLoggedIn = true
                     if message.new_user_id then
                         playerUsername = message.new_user_id
-                        print("about to write user id file")
+                        log.warn("about to write user id file")
                         write_user_id_file()
                         login_status_message = "Welcome, new user: "..my_name
                     elseif message.name_changed then
@@ -1542,6 +1561,7 @@ end
 -- @param ip user ip
 -- @return function main_net_vs
 function main_net_vs_setup(ip)
+    log.trace("Entering net vs setup ")
     assert(ip, "Main net vs setup param is nil")
     if not CONFIG_TABLE.name then
         return main_set_name
@@ -1552,6 +1572,7 @@ function main_net_vs_setup(ip)
     P1, P1_level, P2_level, got_opponent = nil, nil, nil, nil
     P2 = {panel_buffer="", gpanel_buffer=""}
 
+    log.warn("Setting up connection")
     gprint("Setting up connection...", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     network_init(ip)
@@ -1698,7 +1719,7 @@ function main_net_vs()
             P2:render()
             coroutine_wait()
             if currently_spectating and this_frame_keys["escape"] then
-                print("spectator pressed escape during a game")
+                log.warn("spectator pressed escape during a game")
                 my_win_count = 0
                 op_win_count = 0
                 json_send({leave_room=true})
@@ -1780,9 +1801,9 @@ function main_net_vs()
             end
             
             filename = filename..".txt"
-            print("saving replay as "..path..sep..filename)
+            log.warn("saving replay as "..path..sep..filename)
             write_replay_file(path, filename)
-            print("also saving replay as replay.txt")
+            log.warn("also saving replay as replay.txt")
             write_replay_file()
             character_select_mode = "2p_net_vs"
 
@@ -1801,6 +1822,7 @@ end
 --- It declares a fuction and initiate a variable in the same instant
 -- This needs refactoring
 main_local_vs_setup = multi_func(function()
+    log.trace("Entering local vs setup")
     local k = keyboard
     local chosen, maybe = {}, {5,5}
     local P1_level, P2_level = nil, nil
@@ -1871,6 +1893,7 @@ end)
 -- @treturn function
 -- @return end of game transition
 function main_local_vs()
+    log.trace("Entering main local vs")
     --  @todo replay!
     consuming_timesteps = true
     local end_text = nil
@@ -1911,6 +1934,7 @@ end
 -- @treturn function
 -- @return fuction main_caracter_select
 function main_local_vs_yourself_setup()
+    log.trace("Entering local vs yourself setup")
     my_name = CONFIG_TABLE.name or "Player 1"
     op_name = nil
     op_state = nil
@@ -1923,7 +1947,7 @@ end
 -- @treturn function
 -- @return end of game transition
 function main_local_vs_yourself()
-    --  @todo replay!
+    log.trace("Entering local vs yourself")
     consuming_timesteps = true
     local end_text = nil
 
@@ -1952,6 +1976,7 @@ end
 -- @tparam nil
 -- @return next windows to load
 function main_replay_vs()
+    log.trace("Entering replay vs menu")
     local replay = replay.vs
     
     P1 = Stack(1, "vs", replay.P1_level or 5)
@@ -2077,6 +2102,7 @@ end
 -- @treturn function
 -- @return end of game transition
 function main_replay_endless()
+    log.trace("Entering endless mode replay")
     local replay = replay.endless
     
     if replay == nil or replay.speed == nil then
@@ -2134,6 +2160,7 @@ end
 -- @tparam nil
 -- @treturn nil
 function main_replay_puzzle()
+    log.trace("Entering puzzle mode replay")
     local replay = replay.puzzle
     if replay.in_buf == nil or replay.in_buf == "" then
       return main_dumb_transition,
@@ -2204,6 +2231,7 @@ end
 -- @param puzzles puzzles that are pre made
 -- @return fuction that runs the puzzles
 function make_main_puzzle(puzzles)
+    log.trace("Loading puzzles")
     assert(puzzles, "Make main puzzle param is nil")
     local awesome_idx, ret = 1, nil
     function ret()
@@ -2702,6 +2730,7 @@ end
 -- @tparam nil
 -- @treturn nil
 function exit_options_menu()
+    log.trace("Exiting to main screen")
     gprint("writing config to file...", X_STRING_CENTER, Y_STRING_CENTER)
     coroutine_wait()
     write_conf_file()
@@ -2753,6 +2782,7 @@ end
 -- @tparam nil
 -- @return fuction main_select_mode that returns to main menu
 function fullscreen()
+    log.info("Fullscreen enabled")
     love.window.setFullscreen(not love.window.getFullscreen(), "desktop")
     return main_select_mode
 end
@@ -2826,6 +2856,7 @@ end
 -- @tparam nil
 -- @treturn nil
 function write_char_sel_settings_to_file()
+    log.warn("Writing character settings to file")
     if not currently_spectating and my_state then
         gprint("saving character select settings...")
         if not closing then
@@ -2842,6 +2873,7 @@ end
 -- @tparam nil
 -- @treturn nil
 function love.quit()
+    log.info()
     closing = true
     write_char_sel_settings_to_file()
 end
