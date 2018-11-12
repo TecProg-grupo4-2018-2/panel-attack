@@ -25,6 +25,7 @@ local debug_mode_text = {[true]="On", [false]="Off"}
 -- @tparam nil
 -- @treturn nil
 function load_game_resources()
+    log.trace("Entering load_game_resources fuction")
     local func, arg = main_select_mode, nil
     replay = {}
 
@@ -95,6 +96,7 @@ end
 
 -- Loop containing the main menu's behaviour
 do
+    log.trace("Entering main menu loop")
     local active_idx = 1
 
     --- Responsible for displaying the game's main menu 
@@ -466,11 +468,10 @@ function main_character_select()
             my_player_number = 1
         -- Thats right its checking if is nil and different of zero
         elseif my_player_number and my_player_number ~= 0 then
-            print("We assumed our player number is still " .. my_player_number)
+            log.debug("We assumed our player number is still " .. my_player_number)
         else
             log.error("Undefined number player")
             error("We never heard from the server as to what player number we are")
-            print("Error: The server never told us our player number.  Assuming it is 1")
             my_player_number = 1
         end
 
@@ -480,11 +481,10 @@ function main_character_select()
             op_player_number = 2
         -- Thats right its checking if is nil and different of zero
         elseif op_player_number and op_player_number ~= 0 then
-            print("We assumed op player number is still " .. op_player_number)
+            log.debug("We assumed op player number is still " .. op_player_number)
         else
             log.error("Undefined number player")
             error("We never heard from the server as to what player number we are")
-            print("Error: The server never told us our player number.  Assuming it is 2")
             op_player_number = 2
         end
 
@@ -508,7 +508,7 @@ function main_character_select()
 
         if currently_spectating then
             P1 = {panel_buffer="", gpanel_buffer=""}
-            print("we reset P1 buffers at start of main_character_select()")
+            log.info("Reseting P1 buffers at start of main_character_select()")
         else
             -- Nothing to do.
         end
@@ -516,8 +516,8 @@ function main_character_select()
             panel_buffer="",
             gpanel_buffer=""
             }
-        print("we reset P2 buffers at start of main_character_select()")
-        print("serverSupportsRanking: "..tostring(serverSupportsRanking))
+        log.info("Reseting P2 buffers at start of main_character_select()")
+        log.debug("serverSupportsRanking: "..tostring(serverSupportsRanking))
 
         local cursor,op_cursor, coordinate_x, coordinate_y = nil, nil, nil
         -- If serverSupportsRanking is true then update map, else update update map
@@ -616,8 +616,8 @@ function main_character_select()
     end
 
     local name_to_xy = {}
-    print("character_select_mode = " .. (character_select_mode or "nil"))
-    print("map[1][1] = "..(map[1][1] or "nil"))
+    log.debug("character_select_mode = " .. (character_select_mode or "nil"))
+    log.debug("map[1][1] = "..(map[1][1] or "nil"))
     
     for i=1, coordinate_x do
         for j=1, coordinate_y do
@@ -816,7 +816,7 @@ function main_character_select()
         gprint(pstr, render_x + 6, render_y + y_add)
     end
 
-    logger.warn("got to LOC before net_vs_room character select loop")
+    log.warn("got to LOC before net_vs_room character select loop")
     menu_clock = 0
     while true do
         menu_clock = menu_clock + 1
@@ -866,8 +866,9 @@ function main_character_select()
                 end
                 
                 if message.match_start or replay_of_match_so_far then
+                    log.info("The match starts ")
                     local fake_P1 = P1
-                    print("currently_spectating: " .. tostring(currently_spectating))
+                    log.debug("currently_spectating: " .. tostring(currently_spectating))
                     local fake_P2 = P2
                     P1 = Stack(1, "vs", message.player_settings.level,
                         message.player_settings.character, message.player_settings.player_number)
@@ -1369,7 +1370,7 @@ function main_net_vs_lobby()
             active_idx = #menu_options - 1 --the position of the "hide leaderboard" menu item
         else
             while active_idx > #menu_options do
-                print("active_idx > #menu_options.  Decrementing active_idx")
+                log.info("active_idx > #menu_options.  Decrementing active_idx")
                 active_idx = active_idx - 1
             end
             
@@ -1473,7 +1474,7 @@ function main_net_vs_lobby()
         
         active_back = active_idx == #menu_options
         if active_idx ~= prev_act_idx then
-            print("#menu_options: "..#menu_options.."  idx_old: "
+            log.debug("#menu_options: "..#menu_options.."  idx_old: "
             ..prev_act_idx.."  idx_new: "..active_idx.."  active_back: "..tostring(active_back))
             prev_act_idx = active_idx
         else
@@ -1732,7 +1733,7 @@ function main_net_vs()
             -- Nothing to do.
         end
       
-        print(P1.CLOCK, P2.CLOCK)
+        log.debug("P2 clock = " .. P1.CLOCK .. "\nP2 clock =" .. P2.CLOCK)
         if (P1 and P1.play_to_end) or (P2 and P2.play_to_end) then
             if not P1.game_over then
                 if currently_spectating then
@@ -2462,11 +2463,11 @@ function main_options()
         end
     end
 
-    print("asset_sets:")
+    log.debug("Start asset_sets:")
     for k,v in ipairs(asset_sets) do
-        print(v)
+        log.debug(v)
     end
-    
+    log.debug("End asset_sets")
     --- Config menu options
     menu_options = {
         --options menu table reference:
@@ -2669,7 +2670,7 @@ function main_options()
           if menu_options[active_idx][3] == "function" and do_menu_function then
             if menu_options[active_idx][1] == "About custom graphics" then
                   if not love.filesystem.isDirectory("assets/Example folder structure")then
-                    print("Hold on.  Copying an example folder to make this easier...\n This make take a few seconds.")
+                    log.info("Hold on.  Copying an example folder to make this easier...\n This make take a few seconds.")
                     gprint("Hold on.  Copying an example folder to make this easier...\n\nThis may take a few seconds or maybe even a minute or two.\n\nDon't worry if the window goes inactive or \"not responding\"", 280, 280)
                     coroutine_wait()
                     recursive_copy("assets/" .. default_assets_dir, "assets/Example folder structure")
@@ -2690,7 +2691,7 @@ function main_options()
         
         if menu_options[active_idx][1] == "About custom sounds" then
             if not love.filesystem.isDirectory("sounds/Example folder structure")then
-                print("Hold on.  Copying an example folder to make this easier...\n This make take a few seconds.")
+                log.info("Hold on.  Copying an example folder to make this easier...\n This make take a few seconds.")
                 gprint("Hold on.  Copying an example folder to make this easier...\n\nThis may take a few seconds or maybe even a minute or two.\n\nDon't worry if the window goes inactive or \"not responding\"", 280, 280)
                 coroutine_wait()
                 recursive_copy("sounds/" .. default_sounds_dir, "sounds/Example folder structure")
@@ -2873,7 +2874,7 @@ end
 -- @tparam nil
 -- @treturn nil
 function love.quit()
-    log.info()
+    log.info("The game is closing")
     closing = true
     write_char_sel_settings_to_file()
 end
