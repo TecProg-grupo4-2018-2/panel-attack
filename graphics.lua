@@ -4,7 +4,7 @@
 -- @module graphics 
 
 require("input")
-require("constants")
+log = require("log")
 
 --- upload image file and returns drawn image
 -- @function load_img
@@ -22,7 +22,7 @@ function load_img(image_path)
 
     if pcall(creates_image) then
         if CONFIG_TABLE.assets_dir and CONFIG_TABLE.assets_dir ~= default_assets_dir then
-            print("loaded custom asset: "..CONFIG_TABLE.assets_dir.."/"..image_path)
+            log.trace("loaded custom asset: "..CONFIG_TABLE.assets_dir.."/"..image_path)
         end
     else
         img = love.image.newImageData("assets/"..default_assets_dir.."/"..
@@ -333,7 +333,7 @@ function graphics_init()
     end
 
     for k, v in pairs(character_display_names) do
-        print(k.." = "..v)
+        log.info(k.." = "..v)
     end
 
     character_display_names_to_original_names = {}
