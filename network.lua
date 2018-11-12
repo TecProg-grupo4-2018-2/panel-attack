@@ -37,22 +37,36 @@ end
 -- @return nil
 -- @raise Failed to connect
 function network_init(ip)
+
+    log.debug("The IP adressed to socket is "..ip)
+
     TCP_sock = socket.tcp()
     TCP_sock:settimeout(7)
+
     -- Verify TCP connection 
-    if not TCP_sock:connect(ip,49569) then
-        error('Failed to connect =(')
+
+    status, err = pcall(function() TCP_sock:connect(ip, 49569) end)
+
+    if status then
+
+        TCP_sock:settimeout(0)
+        got_H = false
+        send_net('H'..VERSION)
+            
+        assert(config.name)
+        assert(config.level)
+        assert(config.character)
+        assert(config.save_replays_publicly)
+
+        send_json({name=config.name,
+                   level=config.level,
+                   character=config.character, 
+                   save_replays_publicly = config.save_replays_publicly})
+
+    else
+        log.error("Connection error: "..err)
+        error('Failed to connect = (')
     end
-
-    TCP_sock:settimeout(0)
-    got_H = false
-    send_net('H'..VERSION)
-
-    assert(config.name and config.level and config.character and 
-           config.save_replays_publicly)
-
-    send_json({name=config.name, level=config.level, character=config.character, 
-              save_replays_publicly = config.save_replays_publicly})
 end
 
 --- Close the TCP socket global variable
@@ -60,11 +74,15 @@ end
 -- @param nil
 -- @return nil
 function close_socket()
+
     if TCP_sock then
         TCP_sock:close()
+    else
+        log.warn("You close a socket not opened")
     end
 
     TCP_sock = nil
+
 end
 
 --- Parse each type of message to game state
@@ -73,37 +91,43 @@ end
 -- @return nil
 function get_message()
 
-    if string.len(leftovers) == 0 then
-        return nil
-    end
 
-    local kind, gap, length = string.sub(leftovers,1,1), 0
-    local byte = string.byte
+    local message = nil
+    
+    if string.len(leftovers) ~= 0 then
 
-        -- @todo understand all of this lenght parse
-    local type_to_length = {G=1, H=1, N=1, E=4, P=121, O=121, I=2, Q=121, 
-						R=121, L=2, U=2}
-    -- "J" represent json in code 
-    if kind == 'J' then
-        if string.len(leftovers) >= 4 then
-            length = byte(string.sub(leftovers,2,2)) * 65536 +
-            	byte(string.sub(leftovers,3,3)) * BITS_256 +
-            	byte(string.sub(leftovers,4,4))
-            print('json message has length '.. length)
-            gap = 3
+        local kind, gap, length = string.sub(leftovers,1,1), 0
+        local byte = string.byte
+
+                -- @todo understand all of this lenght parse
+        local type_to_length = {G=1, H=1, N=1, E=4, P=121, O=121, I=2, Q=121, 
+                                R=121, L=2, U=2}
+         -- "J" represent json in code 
+        if kind == 'J' then
+            if string.len(leftovers) >= 4 then
+                length = byte(string.sub(leftovers,2,2)) * 65536 +
+                         byte(string.sub(leftovers,3,3)) * BITS_256 +
+                         byte(string.sub(leftovers,4,4))
+                log.debug('json message has length '.. length)
+                gap = 3
+            else
+                return nil
+            end
         else
+            length = type_to_length[kind] - 1
+        end
+        -- Verify string length leftovers
+        if length + gap + 1 > string.len(leftovers) then
             return nil
         end
-    else
-        length = type_to_length[kind] - 1
-    end
-    -- Verify string length leftovers
-    if length + gap + 1 > string.len(leftovers) then
-        return nil
-    end
 
-    local devolution = string.sub(leftovers,2+gap,length+gap+1)
-    leftovers = string.sub(leftovers,length+gap+2)
+        local devolution = string.sub(leftovers,2+gap,length+gap+1)
+        leftovers = string.sub(leftovers,length+gap+2)
+
+    else
+        return nil
+
+    end
 
     return kind, devolution
 end
@@ -139,14 +163,13 @@ BITS_256 = 256
 -- @function send_json
 -- @param obj
 -- @return nil
-function send_json(obj)
+function send_json(data)
 
-    local json = json.encode(obj) -- Recieve a object and encode to json
+    local json = json.encode(data) -- Recieve a object and encode to json
     local json_length = json:len() -- Get json length
     local floor = math.floor
     local char = string.char
     local prefix = 'J' .. char(floor(json_length/65536)) .. 
-
 		char(floor((json_length/BITS_256)%BITS_256)) .. char(json_length%BITS_256)
 
     send_net(prefix..json)
@@ -207,7 +230,12 @@ local process_message = {
 -- @param nil
 -- @return nil
 function connection_is_ready()
-    return got_H and #this_frame_messages > 0
+
+    local response = got_H and #this_frame_messages > 0
+
+    log.debug("Connection is ready response: ".. response)
+    
+    return response
 end
 
 --- Get messages and run connection
@@ -222,7 +250,7 @@ function do_messages()
 
         if typ then
             if kind ~= 'I' and kind ~= 'U' then
-                print('Got message '.. kind ..' '..data)
+                log.debug('Got message '.. kind ..' '..data)
             end
 
             process_message[kind](data)
@@ -241,7 +269,7 @@ function do_messages()
             end
 
             if P1 and P1.mode and replay[P1.mode][kind] then
-                replay[P1.mode][kind]=replay[P1.mode][kind]..data
+                replay[P1.mode][kind] = replay[P1.mode][kind]..data
             end
         else
             break
@@ -295,12 +323,11 @@ end
 -- @param prev_panel actual state of panels
 -- @return nil
 function make_local_panels(stack, prev_panels)
-    local ret = make_panels(stack.NCOLORS, prev_panels, stack)
 
+    local ret = make_panels(stack.NCOLORS, prev_panels, stack)
     stack.panel_buffer = stack.panel_buffer .. ret
     
 	local replay = replay[P1.mode]
-
     if replay and replay.pan_buf then
         replay.pan_buf = replay.pan_buf .. ret
     end
@@ -314,6 +341,7 @@ end
 function make_local_gpanels(stack, prev_panels)
     ret = make_gpanels(stack.NCOLORS, prev_panels)
     stack.gpanel_buffer = stack.gpanel_buffer .. ret
+
     local replay = replay[P1.mode]
 
     -- If local and global panels has updated save replay in buffer
@@ -328,19 +356,21 @@ end
 -- @return Base64 encoded data
 function Stack.send_controls(self)
 
-  local k = keyboard[self.which] -- Represent keyboard 
-  local to_send = base64encode[
-    ((keys[k.raise_faster1] or keys[k.raise_faster2] or this_frame_keys[k.raise_faster1]
-      or this_frame_keys[k.raise_faster2]) and 32 or 0) +
-    ((this_frame_keys[k.swap1] or this_frame_keys[k.swap2]) and 16 or 0) +
-    ((keys[k.up] or this_frame_keys[k.up]) and 8 or 0) +
-    ((keys[k.down] or this_frame_keys[k.down]) and 4 or 0) +
-    ((keys[k.left] or this_frame_keys[k.left]) and 2 or 0) +
-    ((keys[k.right] or this_frame_keys[k.right]) and 1 or 0)+1]
+    local k = keyboard[self.which] -- Represent keyboard 
+    local to_send = base64encode[
+        ((keys[k.raise_faster1] or keys[k.raise_faster2] or this_frame_keys[k.raise_faster1]
+        or this_frame_keys[k.raise_faster2]) and 32 or 0) +
+        ((this_frame_keys[k.swap1] or this_frame_keys[k.swap2]) and 16 or 0) +
+        ((keys[k.up] or this_frame_keys[k.up]) and 8 or 0) +
+        ((keys[k.down] or this_frame_keys[k.down]) and 4 or 0) +
+        ((keys[k.left] or this_frame_keys[k.left]) and 2 or 0) +
+        ((keys[k.right] or this_frame_keys[k.right]) and 1 or 0)+1]
 
     -- load TCP_sock with invited query 
     if TCP_sock then
-        send_net('I'..to_send)
+        if not pcall(function() send_net('I'..to_send) end) then
+            log.error("Error when sended the data via socket")
+        end
     end
 
     local replay = replay[self.mode]
