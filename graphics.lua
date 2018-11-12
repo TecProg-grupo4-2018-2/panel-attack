@@ -6,361 +6,7 @@
 require("input")
 log = require("log")
 
---- upload image file and returns drawn image
--- @function load_img
--- @param image_path image archive
--- @return draw_image drawing image
-function load_img(image_path)
-    local img 
-    assert(image_path)  
-    
-    -- if the path doesn't exist, creates the path 
-    function creates_image()
-        img = love.image.newImageData("assets/"..(CONFIG_TABLE.assets_dir or
-                                        default_assets_dir).."/"..image_path)
-    end
-
-    if pcall(creates_image) then
-        if CONFIG_TABLE.assets_dir and CONFIG_TABLE.assets_dir ~= default_assets_dir then
-            log.trace("loaded custom asset: "..CONFIG_TABLE.assets_dir.."/"..image_path)
-        end
-    else
-        img = love.image.newImageData("assets/"..default_assets_dir.."/"..
-                                        image_path)
-    end
-
-    local draw_image = love.graphics.newImage(img)
-    draw_image:setFilter("nearest","nearest")
-
-    return assert(draw_image) 
-end
-
---- receives an image and draws it
--- @function draw 
--- @param img 
--- @param x position on the x_axis
--- @param y position on the y_axis
--- @param rot rotation
--- @param x_scale
--- @param y_scale 
--- @return nil 
-function draw(img, x, y, rot, x_scale, y_scale)
-    assert(img) 
-    assert(x) 
-    assert(y)
-
-    rot = rot or 0
-    x_scale = x_scale or 1
-    y_scale = y_scale or 1
-
-    gfx_q:push({love.graphics.draw, {
-        img,
-        x*GFX_SCALE,
-        y*GFX_SCALE,
-        rot,
-        x_scale*GFX_SCALE,
-        y_scale*GFX_SCALE
-    }
-    })
-end
-
---- draws the menu
--- @function menu_draw 
--- @param img 
--- @param x position on the x_axis
--- @param y position on the y_axis
--- @param rot rotation
--- @param x_scale
--- @param y_scale 
--- @return nil 
-function menu_draw(img, x, y, rot, x_scale,y_scale)
-    assert(img) 
-    assert(x) 
-    assert(y)
-    assert(rot) 
-    assert(x_scale > 0, "x_scale can't be negative") 
-    assert(y_scale > 0, "y_scale can't be negative") 
-
-    rot = rot or 0
-    x_scale = x_scale or 1
-    y_scale = y_scale or 1
-
-    gfx_q:push({love.graphics.draw, {
-        img,
-        x,
-        y,
-        rot,
-        x_scale,
-        y_scale
-    }
-    })
-
-end
-
---- draws the menu quad, the menu of right-cick
--- @function menu_drawq 
--- @param img 
--- @param quad quad panel
--- @param x position on the x_axis
--- @param y position on the y_axis
--- @param rot rotation
--- @param x_scale
--- @param y_scale 
--- @return nil 
-function menu_drawq(img, quad, x, y, rot, x_scale, y_scale)
-    assert(img) 
-    assert(quad) 
-    assert(x) 
-    assert(y) 
-    assert(rot) 
-    assert(x_scale > 0, "x_scale can't be negative") 
-    assert(y_scale > 0, "y_scale can't be negative")
-
-    rot = rot or 0
-    x_scale = x_scale or 1
-    y_scale = y_scale or 1
-
-    gfx_q:push({love.graphics.draw, {
-        img,
-        quad,
-        x,
-        y,
-        rot,
-        x_scale,
-        y_scale
-    }
-    })
-
-end
-
---- generates rectangles 
--- @function grectangle 
--- @param mode
--- @param x position on the x_axis
--- @param y position on the y_axis
--- @param width_rectangle 
--- @param height_rectangle
--- @return nil 
-function grectangle(mode, x, y, width_rectangle, height_rectangle)
-    assert(mode) 
-    assert(x) 
-    assert(y) 
-    assert(width_rectangle > 0, "x_scale can't be negative") 
-    assert(height_rectangle > 0, "y_scale can't be negative")
-
-    gfx_q:push({love.graphics.rectangle, {
-        mode,
-        x,
-        y,
-        width_rectangle,
-        height_rectangle
-    }
-    })
-end
-
---- print message on screen  
--- @function gprint 
--- @param str message that will be printed
--- @param x position on the x_axis
--- @param y position on the y_axis
--- @return nil 
-function gprint(str, x, y)
-    assert(str) 
-
-    gfx_q:push({love.graphics.print, {
-        str,
-        x,
-        y
-    }
-    })
-end
-
-
---- equals the colors received if the first ones are equal to zero  
--- @function set_color 
--- @param r red
--- @param g green
--- @param b blue 
--- @param a alpha 
--- @return nil 
-function set_color(r, g, b, a)
-    assert(r) 
-    assert(g) 
-    assert(b) 
-    
-    -- current state of red, green, blue and alpha
-    local r_current = 0
-    local g_current = 0
-    local b_current = 0
-    local a_current = 0
-    local MAX_ALPHA
-
-    a = a or MAX_ALPHA
-
-    -- only do it if this color isn't the same as the previous one
-    if r_current ~= r or g_current ~= g or b_current ~= b or a_current ~= a then
-        r_current, g_current, b_current, a_current = r, g, b, a
-        gfx_q:push({love.graphics.setColor, {r, g, b, a}})
-    else
-        -- nothing to do
-    end
-end
-
 local floor = math.floor
-
---- initiates the graphics of the game  
--- @function graphics_init 
--- @param nil
--- @return nil 
-function graphics_init()
-    IMG_panels = {}
-
-    for i = 1, 8 do
-        IMG_panels[i]={}
-        for j = 1, 7 do
-            IMG_panels[i][j]=load_img("panel"..tostring(i)..tostring(j)..".png")
-        end
-    end
-
-    IMG_panels[9]={}
-
-    for j = 1,7 do
-        IMG_panels[9][j] = load_img("panel00.png")
-    end
-
-    local g_parts = {
-        "topleft", "botleft", "topright", "botright",
-        "top", "bot", "left", "right", "face", "pop",
-        "doubleface", "filler1", "filler2", "flash",
-        "portrait"
-    }
-
-    IMG_garbage = {}
-
-    for _, key in ipairs(characters) do
-        local imgs = {}
-        IMG_garbage[key] = imgs
-
-        for _, part in ipairs(g_parts) do
-            imgs[part] = load_img(""..key.."/"..part..".png")
-        end
-    end
-
-    local IMG_metal_flash = load_img("garbageflash.png")
-    local IMG_metal = load_img("metalmid.png")
-    local IMG_metal_l = load_img("metalend0.png")
-    local IMG_metal_r = load_img("metalend1.png")
-
-    IMG_cards = {}
-    IMG_cards[true] = {}
-    IMG_cards[false] = {}
-
-    for i = 4, 66 do
-        IMG_cards[false][i] = load_img("combo"..tostring(floor(i/10))..
-                                        tostring(i%10)..".png")
-    end
-
-    for i = 2, 13 do
-        IMG_cards[true][i] = load_img("chain"..tostring(floor(i/10))..
-                                        tostring(i%10)..".png")
-    end
-
-    for i = 14, 99 do
-        IMG_cards[true][i] = load_img("chain00.png")
-    end
-
-    IMG_character_icons = {}
-
-    for k, name in ipairs(characters) do
-        IMG_character_icons[name] = load_img(""..name.."/icon.png")
-    end
-
-    local MAX_SUPPORTED_PLAYERS = 2
-    IMG_char_sel_cursors = {}
-
-    for player_num = 1, MAX_SUPPORTED_PLAYERS do
-        IMG_char_sel_cursors[player_num] = {}
-
-        for position_num = 1, 2 do
-            local image_name = "char_sel_cur_"..player_num.."P_pos"..
-                                 position_num..".png"
-            IMG_char_sel_cursors[player_num][position_num] = load_img(image_name)
-        end
-    end
-
-    IMG_char_sel_cursor_halves = {left={}, right={}}
-
-    for player_num = 1, MAX_SUPPORTED_PLAYERS do -- position cursor
-        IMG_char_sel_cursor_halves.left[player_num] = {}
-
-        for position_num = 1, 2 do
-            local cur_width_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
-            local half_width, half_height = cur_width_height/2, cur_width_height/2
-
-            IMG_char_sel_cursor_halves["left"][player_num][position_num] =
-                love.graphics.newQuad(0, 0, half_width, cur_width_height, cur_width_height, 
-                                         cur_width_height)
-        end
-
-        IMG_char_sel_cursor_halves.right[player_num] = {}
-
-        for position_num = 1, 2 do
-            local cur_width_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
-            local half_width, half_height = cur_width_height/2, cur_width_height/2
-
-            IMG_char_sel_cursor_halves.right[player_num][position_num] = 
-                love.graphics.newQuad(half_width,0,half_width,cur_width_height,
-                                        cur_width_height, cur_width_height)
-        end
-    end
-
-    character_display_names = {} -- players names 
-
-    for k, original_name in ipairs(characters) do -- show names
-        local file_name = "assets/"..CONFIG_TABLE.assets_dir.."/"..original_name
-                            .."/name.txt"
-        local name_txt_file = love.filesystem.newFile(file_name)
-        local open_success, err = name_txt_file:open("r")
-        local display_name = name_txt_file:read(name_txt_file:getSize())
-
-        name_txt_file:close()
-
-        if display_name then
-            character_display_names[original_name] = display_name
-        else
-            character_display_names[original_name] = original_name
-        end
-    end
-
-    for k, v in pairs(character_display_names) do
-        log.info(k.." = "..v)
-    end
-
-    character_display_names_to_original_names = {}
-
-    for k, v in pairs(character_display_names) do
-        character_display_names_to_original_names[v] = k
-    end
-end
-
---- subscribe the method draw_cards of Stack class for draw the cards  
--- @function Stack.draw_cards 
--- @param self object 
--- @return nil 
-function Stack.draw_cards(self)
-    assert(self)
-    for i = self.card_q.first,self.card_q.last do
-        local card = self.card_q[i]
-        if card_animation[card.frame] then
-            local draw_x = (card.x-1) * 16 + self.pos_x
-            local draw_y = (11-card.y) * 16 + self.pos_y + self.displacement
-                            - card_animation[card.frame]
-            draw(IMG_cards[card.chain][card.n], draw_x, draw_y)
-        else
-            --nothing to do
-        end
-    end
-end
 
 --- subscribe the method render of Stack class for render  
 -- @function Stack.render 
@@ -589,7 +235,8 @@ function Stack.render(self)
             end
 
             if self.input_state then
-                local iraise, iswap, iup, idown, ileft, iright = unpack(base64decode[self.input_state])
+                local iraise, iswap, iup, idown, ileft, iright = 
+                        unpack(base64decode[self.input_state])
                 local inputs_to_print = "inputs:"
 
                 if iraise then
@@ -622,6 +269,376 @@ function Stack.render(self)
     self:render_cursor()
 end
 
+
+--- initiates the graphics of the game  
+-- @function graphics_init 
+-- @param nil
+-- @return nil 
+function graphics_init()
+    IMG_panels = {}
+
+    for i = 1, 8 do
+        IMG_panels[i]={}
+        for j = 1, 7 do
+            IMG_panels[i][j]=load_img("panel"..tostring(i)..tostring(j)..".png")
+        end
+    end
+
+    IMG_panels[9]={}
+
+    for j = 1,7 do
+        IMG_panels[9][j] = load_img("panel00.png")
+    end
+
+    local g_parts = {
+        "topleft", "botleft", "topright", "botright",
+        "top", "bot", "left", "right", "face", "pop",
+        "doubleface", "filler1", "filler2", "flash",
+        "portrait"
+    }
+
+    IMG_garbage = {}
+
+    for _, key in ipairs(characters) do
+        local imgs = {}
+        IMG_garbage[key] = imgs
+
+        for _, part in ipairs(g_parts) do
+            imgs[part] = load_img(""..key.."/"..part..".png")
+        end
+    end
+
+    local IMG_metal_flash = load_img("garbageflash.png")
+    local IMG_metal = load_img("metalmid.png")
+    local IMG_metal_l = load_img("metalend0.png")
+    local IMG_metal_r = load_img("metalend1.png")
+
+    IMG_cards = {}
+    IMG_cards[true] = {}
+    IMG_cards[false] = {}
+
+    for i = 4, 66 do
+        IMG_cards[false][i] = load_img("combo"..tostring(floor(i/10))..
+                                        tostring(i%10)..".png")
+    end
+
+    for i = 2, 13 do
+        IMG_cards[true][i] = load_img("chain"..tostring(floor(i/10))..
+                                        tostring(i%10)..".png")
+    end
+
+    for i = 14, 99 do
+        IMG_cards[true][i] = load_img("chain00.png")
+    end
+
+    IMG_character_icons = {}
+
+    for k, name in ipairs(characters) do
+        IMG_character_icons[name] = load_img(""..name.."/icon.png")
+    end
+
+    local MAX_SUPPORTED_PLAYERS = 2
+    IMG_char_sel_cursors = {}
+
+    for player_num = 1, MAX_SUPPORTED_PLAYERS do
+        IMG_char_sel_cursors[player_num] = {}
+
+        for position_num = 1, 2 do
+            local image_name = "char_sel_cur_"..player_num.."P_pos"..
+                                 position_num..".png"
+            IMG_char_sel_cursors[player_num][position_num] = load_img(image_name)
+        end
+    end
+
+    IMG_char_sel_cursor_halves = {left={}, right={}}
+
+    for player_num = 1, MAX_SUPPORTED_PLAYERS do -- position cursor
+        IMG_char_sel_cursor_halves.left[player_num] = {}
+
+        for position_num = 1, 2 do
+            local cur_width_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
+            local half_width, half_height = cur_width_height/2, cur_width_height/2
+
+            IMG_char_sel_cursor_halves["left"][player_num][position_num] =
+                love.graphics.newQuad(0, 0, half_width, cur_width_height, cur_width_height, 
+                                         cur_width_height)
+        end
+
+        IMG_char_sel_cursor_halves.right[player_num] = {}
+
+        for position_num = 1, 2 do
+            local cur_width_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
+            local half_width, half_height = cur_width_height/2, cur_width_height/2
+
+            IMG_char_sel_cursor_halves.right[player_num][position_num] = 
+                love.graphics.newQuad(half_width,0,half_width,cur_width_height,
+                                        cur_width_height, cur_width_height)
+        end
+    end
+
+    character_display_names = {} -- players names 
+
+    for k, original_name in ipairs(characters) do -- show names
+        local file_name = "assets/"..CONFIG_TABLE.assets_dir.."/"..original_name
+                            .."/name.txt"
+        local name_txt_file = love.filesystem.newFile(file_name)
+        local open_success, err = name_txt_file:open("r")
+        local display_name = name_txt_file:read(name_txt_file:getSize())
+
+        name_txt_file:close()
+
+        if display_name then
+            character_display_names[original_name] = display_name
+        else
+            character_display_names[original_name] = original_name
+        end
+    end
+
+    for k, v in pairs(character_display_names) do
+        log.info(k.." = "..v)
+    end
+
+    character_display_names_to_original_names = {}
+
+    for k, v in pairs(character_display_names) do
+        character_display_names_to_original_names[v] = k
+    end
+end
+
+--- receives an image and draws it
+-- @function draw 
+-- @param img 
+-- @param x position on the x_axis
+-- @param y position on the y_axis
+-- @param rot rotation
+-- @param x_scale
+-- @param y_scale 
+-- @return nil 
+function draw(img, x, y, rot, x_scale, y_scale)
+    assert(x) 
+    assert(y)
+
+    rot = rot or 0
+    x_scale = x_scale or 1
+    y_scale = y_scale or 1
+
+    gfx_q:push({love.graphics.draw, {
+        img,
+        x*GFX_SCALE,
+        y*GFX_SCALE,
+        rot,
+        x_scale*GFX_SCALE,
+        y_scale*GFX_SCALE
+    }
+    })
+end
+
+--- upload image file and returns drawn image
+-- @function load_img
+-- @param image_path image archive
+-- @return draw_image drawing image
+function load_img(image_path)
+    local img 
+    assert(image_path)  
+    
+    -- if the path doesn't exist, creates the path 
+    function creates_image()
+        img = love.image.newImageData("assets/"..(CONFIG_TABLE.assets_dir or
+                                        default_assets_dir).."/"..image_path)
+    end
+
+    if pcall(creates_image) then
+        if CONFIG_TABLE.assets_dir and CONFIG_TABLE.assets_dir ~= default_assets_dir then
+            log.trace("loaded custom asset: "..CONFIG_TABLE.assets_dir.."/"..image_path)
+        end
+    else
+        img = love.image.newImageData("assets/"..default_assets_dir.."/"..
+                                        image_path)
+    end
+
+    local draw_image = love.graphics.newImage(img)
+    draw_image:setFilter("nearest","nearest")
+
+    return assert(draw_image) 
+end
+
+--- print message on screen  
+-- @function gprint 
+-- @param str message that will be printed
+-- @param x position on the x_axis
+-- @param y position on the y_axis
+-- @return nil 
+function gprint(str, x, y)
+    assert(str) 
+
+    gfx_q:push({love.graphics.print, {
+        str,
+        x,
+        y
+    }
+    })
+end
+
+--- subscribe the method draw_cards of Stack class for draw the cards  
+-- @function Stack.draw_cards 
+-- @param self object 
+-- @return nil 
+function Stack.draw_cards(self)
+    assert(self)
+    for i = self.card_q.first,self.card_q.last do
+        local card = self.card_q[i]
+        if card_animation[card.frame] then
+            local draw_x = (card.x-1) * 16 + self.pos_x
+            local draw_y = (11-card.y) * 16 + self.pos_y + self.displacement
+                            - card_animation[card.frame]
+            draw(IMG_cards[card.chain][card.n], draw_x, draw_y)
+        else
+            --nothing to do
+        end
+    end
+end
+
+--- subscribe the method draw_cards of Stack class for render the cursor  
+-- @function Stack.render_cursor 
+-- @param self object 
+-- @return nil 
+function Stack.render_cursor(self)
+    local index = (floor(self.CLOCK/16)%2)+1 
+    local x = self.pos_x - 4
+    local y = self.pos_y - 4
+    local col = (self.cur_col - 1) * 16 
+    local row = (11 - self.cur_row) * 16 
+    
+    local IMG_cursor = {
+        load_img("cur0.png"),
+        load_img("cur1.png")
+    }
+
+    draw(IMG_cursor[index], col+x, row+y+self.displacement)
+end
+
+--- draws the menu
+-- @function menu_draw 
+-- @param img 
+-- @param x position on the x_axis
+-- @param y position on the y_axis
+-- @param rot rotation
+-- @param x_scale
+-- @param y_scale 
+-- @return nil 
+function menu_draw(img, x, y, rot, x_scale,y_scale)
+    assert(img) 
+    assert(x) 
+    assert(y)
+    assert(rot) 
+    assert(x_scale > 0, "x_scale can't be negative") 
+    assert(y_scale > 0, "y_scale can't be negative") 
+
+    rot = rot or 0
+    x_scale = x_scale or 1
+    y_scale = y_scale or 1
+
+    gfx_q:push({love.graphics.draw, {
+        img,
+        x,
+        y,
+        rot,
+        x_scale,
+        y_scale
+    }
+    })
+end
+
+--- draws the menu quad, the menu of right-click
+-- @function menu_drawq 
+-- @param img 
+-- @param quad quad panel
+-- @param x position on the x_axis
+-- @param y position on the y_axis
+-- @param rot rotation
+-- @param x_scale
+-- @param y_scale 
+-- @return nil 
+function menu_drawq(img, quad, x, y, rot, x_scale, y_scale)
+    assert(img) 
+    assert(quad) 
+    assert(x) 
+    assert(y) 
+    assert(rot) 
+    assert(x_scale > 0, "x_scale can't be negative") 
+    assert(y_scale > 0, "y_scale can't be negative")
+
+    rot = rot or 0
+    x_scale = x_scale or 1
+    y_scale = y_scale or 1
+
+    gfx_q:push({love.graphics.draw, {
+        img,
+        quad,
+        x,
+        y,
+        rot,
+        x_scale,
+        y_scale
+    }
+    })
+end
+
+--- generates rectangles 
+-- @function grectangle 
+-- @param mode
+-- @param x position on the x_axis
+-- @param y position on the y_axis
+-- @param width_rectangle 
+-- @param height_rectangle
+-- @return nil 
+function grectangle(mode, x, y, width_rectangle, height_rectangle)
+    assert(mode) 
+    assert(x) 
+    assert(y) 
+    assert(width_rectangle > 0, "x_scale can't be negative") 
+    assert(height_rectangle > 0, "y_scale can't be negative")
+
+    gfx_q:push({love.graphics.rectangle, {
+        mode,
+        x,
+        y,
+        width_rectangle,
+        height_rectangle
+    }
+    })
+end
+
+--- equals the colors received if the first ones are equal to zero  
+-- @function set_color 
+-- @param r red
+-- @param g green
+-- @param b blue 
+-- @param a alpha 
+-- @return nil 
+function set_color(r, g, b, a)
+    assert(r) 
+    assert(g) 
+    assert(b) 
+    
+    -- current state of red, green, blue and alpha
+    local r_current = 0
+    local g_current = 0
+    local b_current = 0
+    local a_current = 0
+    local MAX_ALPHA
+
+    a = a or MAX_ALPHA
+
+    -- only do it if this color isn't the same as the previous one
+    if r_current ~= r or g_current ~= g or b_current ~= b or a_current ~= a then
+        r_current, g_current, b_current, a_current = r, g, b, a
+        gfx_q:push({love.graphics.setColor, {r, g, b, a}})
+    else
+        -- nothing to do
+    end
+end
+
 --- scales letterbox 
 -- @function scale_letterbox     
 -- @param width 
@@ -647,23 +664,3 @@ function scale_letterbox(width, height, w_ratio, h_ratio)
 
     return assert((width - scaled_width) / 2, 0, scaled_width, height) 
 end
-
---- subscribe the method draw_cards of Stack class for render the cursor  
--- @function Stack.render_cursor 
--- @param self object 
--- @return nil 
-function Stack.render_cursor(self)
-    local index = (floor(self.CLOCK/16)%2)+1 
-    local x = self.pos_x - 4
-    local y = self.pos_y - 4
-    local col = (self.cur_col - 1) * 16 
-    local row = (11 - self.cur_row) * 16 
-    
-    local IMG_cursor = {
-        load_img("cur0.png"),
-        load_img("cur1.png")
-    }
-
-    draw(IMG_cursor[index], col+x, row+y+self.displacement)
-end
-
