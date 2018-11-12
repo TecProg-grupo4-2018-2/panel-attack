@@ -1,5 +1,4 @@
------------------
---- Input Module
+----------------- --- Input Module
 --- Handle input hardware
 --- @module input
 
@@ -160,7 +159,6 @@ function love.keypressed(key, isrepeat)
 
     if key == "return" and not isrepeat and love.keyboard.isDown("lalt") then
         love.window.setFullscreen(not love.window.getFullscreen(), "desktop")
-        return
     else
         if not isrepeat then 
             keys[key] = 0
@@ -199,7 +197,10 @@ end
 function key_counts()
 
     for key,value in pairs(keys) do
-        keys[key] = value + 1
+        
+        log.debug("The key:"..key.." has pressed "..keys[key].." times")
+       keys[key] = value + 1
+    
     end
 
 end
