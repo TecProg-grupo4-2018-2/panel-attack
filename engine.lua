@@ -504,7 +504,6 @@ end
 	
 -- local_run is for the stack that belongs to this client.
 function Stack.local_run(self)
-	self:update_cards()
 	self.input_state = self:send_controls()
 	self:prep_rollback()
 	self:controls()
