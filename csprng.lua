@@ -11,7 +11,7 @@ log = require("log")
 -- @param num_integer
 -- @return num_binary
 local function to_binary(num_integer)
-    log.info("Starting Conversion") 
+    log.trace("Starting Conversion") 
     local num_binary = {}
     local copy_num_integer = assert(type(num_integer) == 'number', 'Not is a number')
     local GREATER_HEX = 0x7FFFFFFF -- The bigger number in hexadecimal with a signal
@@ -32,7 +32,7 @@ end
 -- @param num_binary
 -- @return num_integer
 local function from_binary(num_binary)
-    log.info("Starting Conversion")  
+    log.trace("Starting Conversion")  
     local num_integer = 0
     for i=#assert(type(num_binary) == 'number', 'Not is a number'), 1, -1 do
         num_integer = num_integer * 2 + num_binary[i]
@@ -63,12 +63,12 @@ BITS_32 = 32 -- Represent 32 bits
 -- @param seed
 -- @return nil
 function initialize_mt_generator(seed)
-    log.info("Starting Mersenne Twister Generator")
+    log.trace("Starting Mersenne Twister Generator")
     index = 0
     mersenne_twister[0] = assert(seed)
 
     for i=1, DIMENCIONAL_EQUIDISTRIBUTION do 
-        local bit_manipulation  = bit.bxor(mersenne_twister[i-1], bit.rshift(mersenne_twister[i-1], BITS_30))    
+        local bit_manipulation  = assert(bit.bxor(mersenne_twister[i-1], bit.rshift(mersenne_twister[i-1], BITS_30)))    
         local state_succession = (1812433253 * bit_manipulation)+i
         local num_binary = to_binary(state_succession)
 
@@ -109,7 +109,7 @@ end -- end function
 -- @param max
 -- @return (mt_value % max)+min
 function extract_mt(min, max)
-    log.info("Starting Mersenne Twister Extractor")
+    log.trace("Starting Mersenne Twister Extractor")
     -- Exclusives mersenne twister parameters
     local SHIFT_B = 0x9D2C5680
     local SHIFT_C = 0xEFC60000
@@ -126,13 +126,14 @@ function extract_mt(min, max)
     min = assert(min or 0)
     max = assert(max or POSSIBLE_VALUES)
 
-    log.trace("Accessing: mersenne_twister["..index.."]...")
+    log.info("Accessing: mersenne_twister["..index.."]...")
 
     local right_shift_1 = bit.rshift(mt_value, SHIFT_U)
     mt_value = bit.bxor(mt_value, right_shift_1)
     
     local bitwise_and_1 = bit.band(bit.lshift(mt_value, SHIFT_S))
     mt_value = bit.bxor(mt_value, bitwise_and, SHIFT_B)
+    
     local bitwise_and_2 = bit.band(bit.lshift(mt_value, SHIFT_T)) 
     mt_value = bit.bxor(mt_value, bitwise_and_2, SHIFT_C)
     
@@ -150,7 +151,7 @@ NUM_TERMS = 256 -- Possibles terms
 -- @param seed
 -- @return nil
 function seed_from_mt(seed)
-    log.info("Generating Seed to Mersenne Twister") 
+    log.trace("Generating Seed to Mersenne Twister") 
     if assert(seed) then
         mt_seeded = false
         mt_seed = seed
@@ -170,7 +171,7 @@ end
 -- @param a,b,c,d,e,f,g,h
 -- @return a,b,c,d,e,f,g,h
 local function mix(a,b,c,d,e,f,g,h)
-    log.info("Starting mix") 
+    log.trace("Starting mix") 
 
     a = assert(type(a)=='number') % (POSSIBLE_VALUES)
     b = assert(type(b)=='number') % (POSSIBLE_VALUES)
@@ -213,7 +214,7 @@ end
 -- @param nil
 -- @return nil
 local function isaac()
-    log.info("Starting Isaac") 
+    log.trace("Starting Isaac") 
     local copy_memory, memory_result = 0, 0
 
     for i=1, NUM_TERMS do
@@ -230,7 +231,8 @@ local function isaac()
     
         local index_accumulator = ((i+128) % NUM_TERMS)+1 
         accumulator = (memory[index_accumulator] + accumulator) % (POSSIBLE_VALUES)
-	    local index_memory_result = (bit.rshift(copy_memory, 2) % NUM_TERMS)+1 
+	
+	local index_memory_result = (bit.rshift(copy_memory, 2) % NUM_TERMS)+1 
         memory_result = (memory[index_memory_result] + accumulator + previous_result) % (POSSIBLE_VALUES)
 
         memory[i] = memory_result
@@ -246,7 +248,7 @@ end
 -- @param flag
 -- @return nil
 local function randinit(flag)
-    log.info("Starting generating random number")
+    log.trace("Starting generating random number")
     local a,b,c,d,e,f,g,h = 0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9 -- 0x9e3779b9 is the golden ratio
     accumulator = 0
     previous_result = 0
@@ -307,7 +309,7 @@ end
 -- @param entropy
 -- @return nil
 function generate_isaac(entropy)
-    log.info("Starting Isaac Generator")
+    log.trace("Starting Isaac Generator")
     accumulator = 0
     previous_result = 0
     -- Verify the length of entropy
@@ -334,7 +336,7 @@ local function get_random()
     if #memory > 0 then
         return assert(table.remove(memory, 1), 'Not was possible remove')
     else
-        log.info("generating_isaac")
+        log.trace("Generating Isaac")
         generate_isaac()
         return assert(table.remove(memory, 1), 'Not was possible remove')
     end
