@@ -146,6 +146,9 @@ function send_net(...)
     if not STONER_MODE then
         TCP_sock:send(...)
     else
+
+        log.warn("The socket is not in STONER_MODE")
+
         lag_queue:push({...})
 
         -- trick for dont buffer
