@@ -157,8 +157,8 @@ function Stack.render(self)
                     elseif panel.state == "dimmed" then
                         draw_frame = 7
                     elseif self.danger_col[col] then
-                        draw_frame = danger_bounce_table[wrap(1,self.danger_timer+1+floor((col-1)/2),
-                                                            #danger_bounce_table)]
+                        draw_frame = danger_bounce_table[wrap(1,self.danger_timer+
+                                        1+floor((col-1)/2), #danger_bounce_table)]
                     else
                         draw_frame = 1
                     end
