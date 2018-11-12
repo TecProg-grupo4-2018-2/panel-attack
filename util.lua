@@ -4,6 +4,9 @@ local type, setmetatable, getmetatable =
             type, setmetatable, getmetatable
 local random = math.random
 
+-- import logging system
+log = require("log")
+
 --- Return a key in current the frame
 -- @param key 
 -- @return 
@@ -34,8 +37,10 @@ function menu_key_func(fixed, configurable, rept)
 
     if rept then
         query = repeating_key
+        log.debug("Query = repeating_key")
     else
         query = normal_key
+        log.debug("Query = normal_key")
     end
     
     for i=1, #fixed do
@@ -62,21 +67,9 @@ function menu_key_func(fixed, configurable, rept)
     end
 end
 
-
--- bounds b so a<=b<=c
-function bound(a, b, c)
-    if b<a then return a
-    elseif b>c then return c
-    else return b end
-end
-
--- mods b so a<=b<=c
-function wrap(a, b, c)
-    return (b-a)%(c-a+1)+a
-end
-
--- map for numeric tables
+-- map for numeric tables 
 function map(func, tab)
+    log.debug("Map called") 
     local ret = {}
     for i=1, #tab do
         ret[i]=func(tab[i])
@@ -84,7 +77,22 @@ function map(func, tab)
     return ret
 end
 
--- map for dicts
+
+function map_inplace(func, tab) 
+    for i=1, #tab do
+        tab[i]=func(tab[i])
+    end
+    return tab
+end
+
+function map_dict_inplace(func, tab) 
+    for key,val in pairs(tab) do
+        tab[key]=func(val)
+    end
+    return tab
+end
+
+-- map for dicts 
 function map_dict(func, tab)
     local ret = {}
     for key,val in pairs(tab) do
@@ -93,78 +101,38 @@ function map_dict(func, tab)
     return ret
 end
 
-function map_inplace(func, tab)
-    for i=1, #tab do
-        tab[i]=func(tab[i])
-    end
-    return tab
-end
-
-function map_dict_inplace(func, tab)
-    for key,val in pairs(tab) do
-        tab[key]=func(val)
-    end
-    return tab
-end
-
--- reduce for numeric tables
+-- reduce for numeric tables 
 function reduce(func, tab, ...)
+    log.trace("Reduce table") 
+
     local idx, value = 2, nil
     if select("#", ...) ~= 0 then
         value = select(1, ...)
         idx = 1
-    elseif #tab == 0 then
-        error("Tried to reduce empty table with no initial value")
-    else
+    elseif #tab ~= 0 then
         value = tab[1]
+    elseif #tab == 0 then
+        log.error("Tried to reduce empty table with no initial value")  
     end
+
     for i=idx,#tab do
         value = func(value, tab[i])
     end
+
     return value
 end
 
-function car(tab)
-    return tab[1]
-end
--- This sucks lol
-function cdr(tab)
-    return {select(2, unpack(tab))}
-end
+function content_equal(a,b) 
+    log.trace("Content_equal called") 
 
--- a useful right inverse of table.concat
-function procat(str)
-    local ret = {}
-    for i=1,#str do
-        ret[i]=str:sub(i,i)
-    end
-    return ret
-end
-
--- iterate over frozen pairs in sorted order
-function spairs(tab)
-    local keys,vals,idx = {},{},0
-    for k in pairs(tab) do
-        keys[#keys+1] = k
-    end
-    sort(keys)
-    for i=1,#keys do
-        vals[i]=tab[keys[i]]
-    end
-    return function()
-        idx = idx + 1
-        return keys[idx], vals[idx]
-    end
-end
-
-function uniformly(t)
-    return t[random(#t)]
-end
-
-function content_equal(a,b)
     if type(a) ~= "table" or type(b) ~= "table" then
+        log.debug("a or b is not a table") 
+
         return a == b
     end
+
+    log.info("a and b are tables") 
+
     for i=1,2 do
         for k,v in pairs(a) do
             if b[k] ~= v then
@@ -173,14 +141,112 @@ function content_equal(a,b)
         end
         a,b=b,a
     end
+
     return true
+end
+
+-- iterate over frozen pairs in sorted order 
+function spairs(tab)
+    log.trace("Spairs called") 
+
+    local keys,vals,idx = {},{},0
+    for k in pairs(tab) do
+        keys[#keys+1] = k
+    end
+
+    sort(keys)
+    log.debug("Keys sorted") 
+
+    for i=1,#keys do
+        vals[i]=tab[keys[i]]
+    end
+
+    return function()
+        idx = idx + 1
+        log.debug("Returning keys[idx] and vals[idx] of the new idx") 
+
+        return keys[idx], vals[idx]
+    end
+end
+
+-- bounds b so a<=b<=c
+function bound(a, b, c) 
+    log.trace("Bound (a,b,c) called") 
+
+    if b<a then 
+        log.info("b < a")
+
+        return a
+    elseif b>c then
+        log.info("b > c")  
+
+        return c
+    else
+        log.info("a > b > c")
+
+        return b 
+    end
+end
+
+-- mods b so a<=b<=c
+function wrap(a, b, c)
+    log.trace("Wrap (a,b,c) called") 
+
+    return (b-a)%(c-a+1)+a
+end
+
+--Note: this round() doesn't work with negative numbers 
+function round(positive_decimal_number, number_of_decimal_places)
+    log.trace("Round called") 
+
+    if not number_of_decimal_places then
+        number_of_decimal_places = 0
+    end
+
+    return math.floor(positive_decimal_number*10^number_of_decimal_places+0.5)/10^number_of_decimal_places
+end
+
+function car(tab)
+    log.trace("Car called") 
+
+    return tab[1]
+end
+
+function cdr(tab)
+    log.trace("Cdr called") 
+
+    return {select(2, unpack(tab))}
+end
+
+-- a useful right inverse of table.concat
+function procat(str)
+    log.trace("Procat called") 
+    local ret = {}
+
+    for i=1,#str do
+        ret[i]=str:sub(i,i)
+    end
+
+    return ret
+end
+
+function uniformly(t)
+    log.trace("Uniformly called") 
+
+    return t[random(#t)]
 end
 
 -- does not perform deep comparisons of keys which are tables.
 function deep_content_equal(a,b)
+    log.trace("Deep_content_equal called") 
+
     if type(a) ~= "table" or type(b) ~= "table" then
+        log.debug("a or b isn't a table") 
         return a == b
     end
+
+    log.debug("a and b are tables") 
+
     for i=1,2 do
         for k,v in pairs(a) do
             if not deep_content_equal(v,b[k]) then
@@ -189,23 +255,34 @@ function deep_content_equal(a,b)
         end
         a,b=b,a
     end
+
     return true
 end
 
 function shallowcpy(tab)
+    log.trace("Shallowcpy called")
     local ret = {}
+    
     for k,v in pairs(tab) do
         ret[k]=v
     end
+
     return ret
 end
 
 local deepcpy_mapping = {}
 local real_deepcpy
 function real_deepcpy(tab)
+    log.trace("Real_deepcpy called") 
+
     if deepcpy_mapping[tab] ~= nil then
+        log.debug("deepcpy_mapping[tab] isn't nil") 
+
         return deepcpy_mapping[tab]
     end
+
+    log.debug("deepcpy_mapping[tab] is nil") 
+
     local ret = {}
     deepcpy_mapping[tab] = ret
     deepcpy_mapping[ret] = ret
@@ -218,23 +295,26 @@ function real_deepcpy(tab)
         end
         ret[k]=v
     end
+
     return setmetatable(ret, getmetatable(tab))
 end
 
-function deepcpy(tab)
-    if type(tab) ~= "table" then return tab end
+function deepcpy(tab) 
+    log.trace("Deepcpy called") 
+
+    if type(tab) ~= "table" then
+        log.debug("tab isn't a table") 
+
+        return tab 
+    end
+
+    log.debug("tab is a table") 
+
     local ret = real_deepcpy(tab)
     deepcpy_mapping = {}
     return ret
 end
 
---Note: this round() doesn't work with negative numbers
-function round(positive_decimal_number, number_of_decimal_places)
-    if not number_of_decimal_places then
-        number_of_decimal_places = 0
-    end
-    return math.floor(positive_decimal_number*10^number_of_decimal_places+0.5)/10^number_of_decimal_places
-end
 -- Not actually for encoding/decoding byte streams as base64.
 -- Rather, it's for encoding streams of 6-bit symbols in printable characters.
 base64encode = procat("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890+/")
