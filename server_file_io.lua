@@ -4,6 +4,47 @@
 -- @module server_file_io 
 ------
 
+log = require("log")
+
+--- User csprng to generate random issues
+-- @function read_csprng_seed_file
+-- @param nil
+-- @return nil
+function read_csprng_seed_file()
+    local function read_file()
+        local file = assert(io.open('csprng_seed.txt', 'r') ) 
+
+        if file then
+            assert(io.input(file), "input is invalid") 
+            csprng_seed = io.read('*all') 
+            io.close(file)
+        else
+            log.info('csprng_seed.txt could not be read.  Writing a new ' .. 
+                'default (2000) csprng_seed.txt')
+
+            local new_file = assert(io.open('csprng_seed.txt', 'w')) 
+
+            io.output(new_file)
+            io.write('2000')
+            io.close(new_file)
+            csprng_seed = '2000'
+        end
+
+        if tonumber(csprng_seed) then
+            local temporary = assert(tonumber(csprng_seed)) 
+
+            csprng_seed = temporary
+        else 
+            error('ERROR: csprng_seed.txt content is not numeric. ' .. 
+                'Using default (2000) as csprng_seed')
+
+            csprng_seed = 2000
+        end
+    end 
+
+    pcall(read_file)
+end
+
 --- Check if is really a file
 -- @function check_is_file
 -- @param name string with name of the file
@@ -15,18 +56,6 @@ function check_is_file(name)
         -- return false instead of a possible nil
     else
         return false
-    end
-end
-
---- Check if is a directory
--- @function check_is_file_dir
--- @param name name of the file
--- @return boolean, true if is a directory, false if is not.
-function check_is_file_dir(name) 
-    if type(name)~='string' then 
-        return false 
-    else
-        return assert((os.rename(name, name)))  
     end
 end
 
@@ -48,20 +77,18 @@ function check_is_dir(name)
     end
 end
 
---- Create a directory using path
--- @function make_dir 
--- @param path string with path of the new directory
--- @return nil
-function make_dir(path) 
-    assert(path) 
-
-    local sep, pStr = package.config:sub(1, 1), ''
-
-    for dir in path:gmatch('[^' .. sep .. ']+') do
-        pStr = pStr .. dir .. sep
-        lfs.mkdir(pStr)
+--- Check if is a directory
+-- @function check_is_file_dir
+-- @param name name of the file
+-- @return boolean, true if is a directory, false if is not.
+function check_is_file_dir(name) 
+    if type(name)~='string' then 
+        return false 
+    else
+        return assert((os.rename(name, name)))  
     end
 end
+
 
 --- Write text in player files
 -- @function write_playters_file
@@ -183,41 +210,18 @@ function write_replay_file(replay, path, filename)
 
     pcall(write_file)
 end
---- User csprng to generate random issues
--- @function read_csprng_seed_file
--- @param nil
+
+--- Create a directory using path
+-- @function make_dir 
+-- @param path string with path of the new directory
 -- @return nil
-function read_csprng_seed_file()
-    local function read_file()
-        local file = assert(io.open('csprng_seed.txt', 'r') ) 
+function make_dir(path) 
+    assert(path) 
 
-        if file then
-            assert(io.input(file), "input is invalid") 
-            csprng_seed = io.read('*all') 
-            io.close(file)
-        else
-            print('csprng_seed.txt could not be read.  Writing a new ' .. 
-                'default (2000) csprng_seed.txt')
+    local sep, pStr = package.config:sub(1, 1), ''
 
-            local new_file = assert(io.open('csprng_seed.txt', 'w')) 
-
-            io.output(new_file)
-            io.write('2000')
-            io.close(new_file)
-            csprng_seed = '2000'
-        end
-
-        if tonumber(csprng_seed) then
-            local temporary = assert(tonumber(csprng_seed)) 
-
-            csprng_seed = temporary
-        else 
-            print('ERROR: csprng_seed.txt content is not numeric. ' .. 
-                'Using default (2000) as csprng_seed')
-
-            csprng_seed = 2000
-        end
-    end 
-
-    pcall(read_file)
+    for dir in path:gmatch('[^' .. sep .. ']+') do
+        pStr = pStr .. dir .. sep
+        lfs.mkdir(pStr)
+    end
 end
