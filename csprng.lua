@@ -3,16 +3,20 @@
 --- Cryptographically secure pseudo-random number generator, is a pseudo-random number generator (PRNG) with properties that make it suitable for use in cryptography. Composed of the Mersenne Twister RGN and the ISAAC algorithm. The Mersenne Twister can be used as an RNG for non-cryptographic purposes.Here, we're using it to seed the ISAAC algorithm, which *can* be used for cryptographic purposes. 
 -- @module csprngk
 
+--- import log system 
+log = require("log")
+
 --- This function convert a number decimal to binary, keeping arbitrary-length table of bits
 -- @function to_binary
 -- @param num_integer
 -- @return num_binary
-local function to_binary(num_integer) 
+local function to_binary(num_integer)
+    log.info("Starting Conversion") 
     local num_binary = {}
     local copy_num_integer = assert(type(num_integer) == 'number', 'Not is a number')
     local GREATER_HEX = 0x7FFFFFFF -- The bigger number in hexadecimal with a signal
-    local rest = copy_num_integer % 2
-    local div = copy_num_integer / 2
+    local rest = assert(copy_num_integer % 2, "Arithmetic error")
+    local div = assert(copy_num_integer / 2, "Arithmetic error")
 
     while true do
         assert(table.insert(num_binary, rest), 'Not was possible insert a number')
@@ -27,7 +31,8 @@ end
 --- This function convert an arbitrary-length table of bits to a number decimal
 -- @param num_binary
 -- @return num_integer
-local function from_binary(num_binary) 
+local function from_binary(num_binary)
+    log.info("Starting Conversion")  
     local num_integer = 0
     for i=#assert(type(num_binary) == 'number', 'Not is a number'), 1, -1 do
         num_integer = num_integer * 2 + num_binary[i]
@@ -58,11 +63,12 @@ BITS_32 = 32 -- Represent 32 bits
 -- @param seed
 -- @return nil
 function initialize_mt_generator(seed)
+    log.info("Starting Mersenne Twister Generator")
     index = 0
     mersenne_twister[0] = assert(seed)
 
     for i=1, DIMENCIONAL_EQUIDISTRIBUTION do 
-        local bit_manipulation  = bit.bxor(mersenne_twister[i-1], bit.rshift(mersenne_twister[i-1], BITS_30) )    
+        local bit_manipulation  = bit.bxor(mersenne_twister[i-1], bit.rshift(mersenne_twister[i-1], BITS_30))    
         local state_succession = (1812433253 * bit_manipulation)+i
         local num_binary = to_binary(state_succession)
 
@@ -79,7 +85,8 @@ PARAMETER_N = 624 --- This parameter is internal in original code Mersenne Twist
 --- This function restock the variable mersenne_twister with new random numbers
 -- @param nil
 -- @return nil
-local function generate_mt() 
+local function generate_mt()
+    log.info("Generating Mersenne Twister") 
     -- Exclusives mersenne twister parameters
     local PARAMETER_U = 0x80000000
     local PARAMETER_L = 0x7FFFFFFF
@@ -102,7 +109,7 @@ end -- end function
 -- @param max
 -- @return (mt_value % max)+min
 function extract_mt(min, max)
-
+    log.info("Starting Mersenne Twister Extractor")
     -- Exclusives mersenne twister parameters
     local SHIFT_B = 0x9D2C5680
     local SHIFT_C = 0xEFC60000
@@ -118,7 +125,8 @@ function extract_mt(min, max)
     local mt_value = mersenne_twister[index]
     min = assert(min or 0)
     max = assert(max or POSSIBLE_VALUES)
-    --print("Accessing: mersenne_twister["..index.."]...")
+
+    log.trace("Accessing: mersenne_twister["..index.."]...")
 
     local right_shift_1 = bit.rshift(mt_value, SHIFT_U)
     mt_value = bit.bxor(mt_value, right_shift_1)
@@ -141,7 +149,8 @@ NUM_TERMS = 256 -- Possibles terms
 --- This function seed ISAAC algorithm with numbers from the variable mersenne_twister. Seed the ISAAC RNG, optionally seeding the Mersenne Twister RNG beforehand.
 -- @param seed
 -- @return nil
-function seed_from_mt(seed) 
+function seed_from_mt(seed)
+    log.info("Generating Seed to Mersenne Twister") 
     if assert(seed) then
         mt_seeded = false
         mt_seed = seed
@@ -161,6 +170,8 @@ end
 -- @param a,b,c,d,e,f,g,h
 -- @return a,b,c,d,e,f,g,h
 local function mix(a,b,c,d,e,f,g,h)
+    log.info("Starting mix") 
+
     a = assert(type(a)=='number') % (POSSIBLE_VALUES)
     b = assert(type(b)=='number') % (POSSIBLE_VALUES)
     c = assert(type(c)=='number') % (POSSIBLE_VALUES)
@@ -202,6 +213,7 @@ end
 -- @param nil
 -- @return nil
 local function isaac()
+    log.info("Starting Isaac") 
     local copy_memory, memory_result = 0, 0
 
     for i=1, NUM_TERMS do
@@ -234,6 +246,7 @@ end
 -- @param flag
 -- @return nil
 local function randinit(flag)
+    log.info("Starting generating random number")
     local a,b,c,d,e,f,g,h = 0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9,0x9e3779b9 -- 0x9e3779b9 is the golden ratio
     accumulator = 0
     previous_result = 0
@@ -294,6 +307,7 @@ end
 -- @param entropy
 -- @return nil
 function generate_isaac(entropy)
+    log.info("Starting Isaac Generator")
     accumulator = 0
     previous_result = 0
     -- Verify the length of entropy
@@ -302,7 +316,7 @@ function generate_isaac(entropy)
             sequence_results[i] = entropy[i]
         end -- end for
     else -- end if
-        print("2. seed_from_mt")
+        log.trace("2. seed_from_mt")
         seed_from_mt()
     end
     for i=1, NUM_TERMS do
@@ -320,7 +334,7 @@ local function get_random()
     if #memory > 0 then
         return assert(table.remove(memory, 1), 'Not was possible remove')
     else
-        print("generating_isaac")
+        log.info("generating_isaac")
         generate_isaac()
         return assert(table.remove(memory, 1), 'Not was possible remove')
     end
