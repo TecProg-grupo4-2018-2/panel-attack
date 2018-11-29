@@ -3,12 +3,16 @@
 --- Handle sockets and connection of the game.
 -- @module network
 
-
 --- TCP socket
 local TCP_sock = nil
 
 --- Save data for socket
 local leftovers = ''
+
+-- ##########################################
+--      Handle sockets functions
+-- ##########################################
+--- Init, close, flush sockets
 
 --- Flush the TCP socket variable
 -- @function flush_socket
@@ -40,6 +44,83 @@ function close_socket()
 
     TCP_sock = nil
 end
+
+--- Config socket (set timeout, ip, port)
+-- @function network_init
+-- @param ip init interface with this ip
+-- @return nil
+-- @raise Failed to connect
+function network_init(ip)
+    TCP_sock = socket.tcp()
+    TCP_sock:settimeout(7)
+    -- Verify TCP connection 
+    if not TCP_sock:connect(ip,49569) then
+        error('Failed to connect =(')
+    end
+
+    TCP_sock:settimeout(0)
+    got_H = false
+    send_net('H'..VERSION)
+
+    assert(config.name and config.level and config.character and 
+           config.save_replays_publicly)
+
+    send_json({name=config.name, level=config.level, character=config.character, 
+              save_replays_publicly = config.save_replays_publicly})
+end
+
+--- Verify if connection is ready
+-- @function connection_is_ready
+-- @param nil
+-- @return nil
+function connection_is_ready()
+    return got_H and #this_frame_messages > 0
+end
+
+-- ######################################
+--     Queue functions
+-- ######################################
+---  Handle queue of messages 
+
+--- queue of data in connection
+local lag_queue = Queue()
+
+--- Send a queue of data in socket
+-- @function send_net
+-- @param ...
+-- @return nil
+function send_net(...)
+
+    local MAX_BUFFER = 70
+
+    if not STONER_MODE then
+        TCP_sock:send(...)
+    else
+        lag_queue:push({...})
+
+        -- trick for dont buffer
+        -- @todo refactor this
+        if lag_queue:len() == MAX_BUFFER then
+            TCP_sock:send(unpack(lag_queue:pop()))
+        end
+    end
+end
+
+--- Clean queue sending all the data
+-- @function undo_stonermode
+-- @param nil
+-- @return nil
+function undo_stonermode()
+    while lag_queue:len() ~= 0 do
+        TCP_sock:send(unpack(lag_queue:pop()))
+    end
+end
+
+-- #############################
+--      Message functions
+-- #############################
+--- Send TCP messages and handle connections
+
 
 --- Parse each type of message to game state
 -- @function get_message
@@ -81,31 +162,6 @@ function get_message()
 
     return kind, devolution
 end
-
---- queue of data in connection
-local lag_queue = Queue()
-
---- Send a queue of data in socket
--- @function send_net
--- @param ...
--- @return nil
-function send_net(...)
-
-    local MAX_BUFFER = 70
-
-    if not STONER_MODE then
-        TCP_sock:send(...)
-    else
-        lag_queue:push({...})
-
-        -- trick for dont buffer
-        -- @todo refactor this
-        if lag_queue:len() == MAX_BUFFER then
-            TCP_sock:send(unpack(lag_queue:pop()))
-        end
-    end
-end
-
 --- Maximum of 8 bit represetantion
 BITS_256 = 256
 
@@ -125,17 +181,6 @@ function send_json(obj)
 
     send_net(prefix..json)
 end
-
---- Clean queue sending all the data
--- @function undo_stonermode
--- @param nil
--- @return nil
-function undo_stonermode()
-    while lag_queue:len() ~= 0 do
-        TCP_sock:send(unpack(lag_queue:pop()))
-    end
-end
-
 local got_H = false
 
 --- map of functions
@@ -173,40 +218,6 @@ local process_message = {
         end
 
     end
-}
-
---- Config socket (set timeout, ip, port)
--- @function network_init
--- @param ip init interface with this ip
--- @return nil
--- @raise Failed to connect
-function network_init(ip)
-    TCP_sock = socket.tcp()
-    TCP_sock:settimeout(7)
-    -- Verify TCP connection 
-    if not TCP_sock:connect(ip,49569) then
-        error('Failed to connect =(')
-    end
-
-    TCP_sock:settimeout(0)
-    got_H = false
-    send_net('H'..VERSION)
-
-    assert(config.name and config.level and config.character and 
-           config.save_replays_publicly)
-
-    send_json({name=config.name, level=config.level, character=config.character, 
-              save_replays_publicly = config.save_replays_publicly})
-end
-
---- Verify if connection is ready
--- @function connection_is_ready
--- @param nil
--- @return nil
-function connection_is_ready()
-    return got_H and #this_frame_messages > 0
-end
-
 --- Get messages and run connection
 -- @function do_messages
 -- @param nil
@@ -261,6 +272,11 @@ end
 function request_spectate(roomNr)
     send_json({spectate_request={sender=config.name, roomNumber = roomNr}})
 end
+
+-- #################################
+--       Panels manager functions
+-- #################################
+--- Handle elements panels table
 
 --- Update panels data
 -- @function ask_for_panels
@@ -318,6 +334,11 @@ function make_local_gpanels(stack, prev_panels)
         replay.gpan_buf = replay.gpan_buf .. ret
     end
 end
+
+-- ##################################
+--          Stacking functions
+-- ##################################
+--- Handle the stack controls 
 
 --- Send stack of controls for replay mode
 -- @function STack.send_controls 
