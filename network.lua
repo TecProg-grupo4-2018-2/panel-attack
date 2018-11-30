@@ -152,6 +152,7 @@ function get_message()
     else
         length = type_to_length[kind] - 1
     end
+
     -- Verify string length leftovers
     if length + gap + 1 > string.len(leftovers) then
         return nil
@@ -181,6 +182,7 @@ function send_json(obj)
 
     send_net(prefix..json)
 end
+
 local got_H = false
 
 --- map of functions
