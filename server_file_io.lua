@@ -183,6 +183,7 @@ function write_replay_file(replay, path, filename)
 
     pcall(write_file)
 end
+
 --- User csprng to generate random issues
 -- @function read_csprng_seed_file
 -- @param nil
@@ -191,6 +192,7 @@ function read_csprng_seed_file()
     local function read_file()
         local file = assert(io.open('csprng_seed.txt', 'r') ) 
 
+        --take the seed from the file, else create a new file with a standard seed
         if file then
             assert(io.input(file), "input is invalid") 
             csprng_seed = io.read('*all') 
@@ -207,6 +209,7 @@ function read_csprng_seed_file()
             csprng_seed = '2000'
         end
 
+        -- converts the seed to number, otherwise the seed receives a number
         if tonumber(csprng_seed) then
             local temporary = assert(tonumber(csprng_seed)) 
 
