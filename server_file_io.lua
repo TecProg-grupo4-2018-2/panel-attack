@@ -183,6 +183,23 @@ function write_replay_file(replay, path, filename)
 
     pcall(write_file)
 end
+    
+-- converts the seed to number, otherwise the seed receives a number
+-- @function read_csprng_seed_file
+-- @param nil
+-- @return nil
+function converts_seed(csprng_seed) 
+    if tonumber(csprng_seed) then
+        local temporary = assert(tonumber(csprng_seed)) 
+
+        csprng_seed = temporary
+    else 
+        print('ERROR: csprng_seed.txt content is not numeric. ' .. 
+        'Using default (2000) as csprng_seed')
+
+        csprng_seed = 2000
+    end
+end
 
 --- User csprng to generate random issues
 -- @function read_csprng_seed_file
@@ -209,17 +226,7 @@ function read_csprng_seed_file()
             csprng_seed = '2000'
         end
 
-        -- converts the seed to number, otherwise the seed receives a number
-        if tonumber(csprng_seed) then
-            local temporary = assert(tonumber(csprng_seed)) 
-
-            csprng_seed = temporary
-        else 
-            print('ERROR: csprng_seed.txt content is not numeric. ' .. 
-                'Using default (2000) as csprng_seed')
-
-            csprng_seed = 2000
-        end
+        converts_seed(csprng_seed)
     end 
 
     pcall(read_file)
