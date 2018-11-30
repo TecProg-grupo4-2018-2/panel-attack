@@ -1,6 +1,9 @@
 -- forward declaration
 local jpexists
 
+-- ################################
+-- joystick section
+-- ################################
 for k,v in pairs(love.handlers) do
   if k=="jp" then
     jpexists = true
@@ -8,6 +11,10 @@ for k,v in pairs(love.handlers) do
 end
 
 -- Uso de funcoes decompostas para cuidar do setter das variaveis jpname e jrname
+--- Sets the variable jpname based on jp state
+-- @function set_jpname
+-- @param jp
+-- @param string with joystick state value
 function set_jpname(jp)
 	if jp then
 	  return "jp"
@@ -17,6 +24,10 @@ function set_jpname(jp)
 end
 
 -- Uso de funcoes decompostas para cuidar do setter das variaveis jpname e jrname
+--- Sets the variable jrname based on jp state
+-- @function set_jpname
+-- @param jp
+-- @param string with joystick state value
 function set_jrname(jp)
   if jp then
     return "jr"
@@ -43,6 +54,9 @@ end
 
 local prev_ax = {}
 
+-- ################################
+-- measure pressure in keystroke
+-- ################################
 local axis_to_button = function(idx, value)
   local THRESHOLD = 0.5
   local prev = prev_ax[idx] or 0
@@ -150,6 +164,12 @@ function key_counts()
   end
 end
 
+-- ################################
+-- Stack class
+-- ################################
+-- handles user input
+-- funtion stack.controls
+-- @params stack
 function Stack.controls(self)
   local new_dir = nil
   local sdata = self.input_state

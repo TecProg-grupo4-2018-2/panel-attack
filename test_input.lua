@@ -15,12 +15,13 @@ function test_fail_jp_name()
 end
 
 
-function test_pass_set_jrname
+function test_pass_set_jrname()
     assert_true(input.set_jrname(true) == 'jr')
     assert_true(input.set_jrname(false) == 'joystickreleased')
 end
 
-function test_fail_set_jrname
+function test_fail_set_jrname()
     assert_false(input.set_jrname(false) == 'jr')
     assert_false(input.set_jrname(true) == 'joystickreleased')
 end
+
