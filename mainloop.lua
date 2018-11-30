@@ -385,235 +385,8 @@ end
 -- @tparam nil
 -- @treturn nil
 function main_character_select()
-    love.audio.stop()
-    local map = {}
+    -- Local main_character_select function begin
 
-    if character_select_mode == "2p_net_vs" then
-        local opponent_connected = false
-        local retries, retry_limit = 0, 500
-
-        while not global_initialize_room_msg and retries < retry_limit do
-            for _, message in ipairs(this_frame_messages) do
-                if message.create_room or message.character_select or message.spectate_request_granted then
-                    global_initialize_room_msg = message
-                else
-                    -- Nothing to do.
-                end
-            end
-
-            gprint("Waiting for room initialization...", X_STRING_CENTER, Y_STRING_CENTER)
-            coroutine_wait()
-            do_messages()
-
-            retries = retries + 1
-        end
-
-        if room_number_last_spectated and retries >= retry_limit and currently_spectating then
-            request_spectate(room_number_last_spectated)
-            retries = 0
-
-            -- runs if the player has lost connection
-            while not global_initialize_room_msg and retries < retry_limit do
-                for _, message in ipairs(this_frame_messages) do
-                    if message.create_room or message.character_select or message.spectate_request_granted then
-                        global_initialize_room_msg = message
-                    end
-                end
-
-                gprint("Lost connection.  Trying to rejoin...", X_STRING_CENTER, Y_STRING_CENTER)
-                coroutine_wait()
-                do_messages()
-
-                retries = retries + 1
-                    
-            end
-        else
-            -- Nothing to do.
-        end
-
-        -- runs if connection has failed
-        if not global_initialize_room_msg then
-            return main_dumb_transition, {main_select_mode, "Failed to connect.\n\nReturning to main menu", 60, 300}
-        else
-            -- Nothing to do.
-        end
-
-        message = global_initialize_room_msg
-        global_initialize_room_msg = nil
-        if message.ratings then
-            global_current_room_ratings = message.ratings
-        end
-
-        global_my_state = message.a_menu_state
-        global_op_state = message.b_menu_state
-
-        
-        if message.your_player_number then
-            my_player_number = message.your_player_number
-        elseif currently_spectating then
-            my_player_number = 1
-        -- Thats right its checking if is nil and different of zero
-        elseif my_player_number and my_player_number ~= 0 then
-            print("We assumed our player number is still " .. my_player_number)
-        else
-            error("We never heard from the server as to what player number we are")
-            print("Error: The server never told us our player number.  Assuming it is 1")
-            my_player_number = 1
-        end
-
-        if message.op_player_number then
-            op_player_number = message.op_player_number or op_player_number
-        elseif currently_spectating then
-            op_player_number = 2
-        -- Thats right its checking if is nil and different of zero
-        elseif op_player_number and op_player_number ~= 0 then
-            print("We assumed op player number is still " .. op_player_number)
-        else
-            error("We never heard from the server as to what player number we are")
-            print("Error: The server never told us our player number.  Assuming it is 2")
-            op_player_number = 2
-        end
-
-        if message.win_counts then
-            update_win_counts(message.win_counts)
-        else
-            -- Nothing to do.
-        end
-        if message.replay_of_match_so_far then
-            replay_of_match_so_far = message.replay_of_match_so_far
-        else
-            -- Nothing to do.
-        end
-
-        if message.ranked then
-            matchType = "Ranked"
-            match_type_message = ""
-        else 
-            matchType = "Casual"
-        end
-
-        if currently_spectating then
-            P1 = {panel_buffer="", gpanel_buffer=""}
-            print("we reset P1 buffers at start of main_character_select()")
-        else
-            -- Nothing to do.
-        end
-        P2 = {
-            panel_buffer="",
-            gpanel_buffer=""
-            }
-        print("we reset P2 buffers at start of main_character_select()")
-        print("serverSupportsRanking: "..tostring(serverSupportsRanking))
-
-        local cursor,op_cursor, coordinate_x, coordinate_y = nil, nil, nil
-        -- If serverSupportsRanking is true then update map, else update update map
-        if serverSupportsRanking then
-            map = MAP_RANKING
-        else
-            map = MAP_DEFAULT
-        end
-    end
-
-    if character_select_mode == "1p_vs_yourself" then
-        map = MAP_1P_VS_YOURSELF
-    else
-        -- Nothing to do.
-    end
-
-    local op_state = global_op_state or {character="lip", level=5, cursor="level", ready=false}
-    global_op_state = nil
-    cursor, op_cursor, coordinate_x, coordinate_y = {1, 1}, {1, 1}, 5, 7
-    local k = keyboard[1]
-    local up, down, left, right = {-1, 0}, {1, 0}, {0, -1}, {0, 1}
-
-    my_state = global_my_state or
-        {character=CONFIG_TABLE.character, level=CONFIG_TABLE.level, cursor="level", ready=false}
-
-    global_my_state = nil
-    my_win_count = my_win_count or 0
-    local prev_state = shallowcpy(my_state)
-    op_win_count = op_win_count or 0
-
-    if character_select_mode == "2p_net_vs" then
-        global_current_room_ratings = global_current_room_ratings or 
-            {{new=0, old=0, difference=0}, {new=0, old=0, difference=0}}
-
-        -- Win ratio of the current player
-        my_expected_win_ratio = (global_current_room_ratings[op_player_number].new
-            -global_current_room_ratings[my_player_number].new)
-            /rating_spread_modifier
-
-        my_expected_win_ratio = 100 * round(1/1 + 10^my_expected_win_ratio, 2)
-
-        -- Win ratio of the oponent player
-        op_expected_win_ratio = (global_current_room_ratings[my_player_number].new
-            -global_current_room_ratings[op_player_number].new)
-            /rating_spread_modifier
-
-        op_expected_win_ratio = 100 * round(1/1 + 10^op_expected_win_ratio, 2)
-    else
-        -- Nothing to do.
-    end
-
-    if character_select_mode == "2p_net_vs" then
-        matchType = matchType or "Casual"
-        if matchType == "" then
-            matchType = "Casual" 
-        else
-            -- Nothing to do.
-        end
-    else
-        -- Nothing to do.
-    end
-
-    match_type_message = match_type_message or ""
-    local selected = false
-    local active_str = "level"
-    local selectable = {level=true, ready=true}
-
-    local function move_cursor(direction)
-        assert(map, "move_cursor:map is nil")
-        assert(cursor, "move_cursor:cursor is nil")
-        assert(direction, "Move cursor param is nil")
-        local dx, dy = unpack(direction)
-        local can_x, can_y = wrap(1, cursor[1]+dx, coordinate_x), wrap(1, cursor[2]+dy, coordinate_y)
-
-        while can_x ~= cursor[1] or can_y ~= cursor[2] do
-            if map[can_x][can_y] and map[can_x][can_y] ~= map[cursor[1]][cursor[2]] then
-                break
-            else
-                -- Nothing to do.
-            end
-
-            can_x, can_y = wrap(1, can_x+dx, coordinate_x), wrap(1, can_y+dy, coordinate_y)
-        end
-        cursor[1], cursor[2] = can_x,can_y
-    end
-
-    --- Leaves the room
-    -- @tparam nil
-    -- @treturn nil
-    local function do_leave()
-        my_win_count = 0
-        op_win_count = 0
-        write_char_sel_settings_to_file()
-        json_send({leave_room=true})
-    end
-
-    local name_to_xy = {}
-    print("character_select_mode = " .. (character_select_mode or "nil"))
-    print("map[1][1] = "..(map[1][1] or "nil"))
-    
-    for i=1, coordinate_x do
-        for j=1, coordinate_y do
-            if map[i][j] then
-               name_to_xy[map[i][j]] = {i,j}
-            else
-                -- Nothing to do.
-            end
-        end
-    end
-    
     --- Draws buttons and other strings on the screen
     -- @param x coordinate x where render
     -- @param y coordinate x where render
@@ -800,6 +573,278 @@ function main_character_select()
         end
         gprint(pstr, render_x + 6, render_y + y_add)
     end
+
+    -- Move cursor to direction that was insert in the keyboard
+    -- @param direction pack of 2 variables with coordinate x and y
+    -- @treturn nil
+    local function move_cursor(direction)
+        assert(map, "move_cursor:map is nil")
+        assert(cursor, "move_cursor:cursor is nil")
+        assert(direction, "Move cursor param is nil")
+        local dx, dy = unpack(direction)
+        local can_x, can_y = wrap(1, cursor[1]+dx, coordinate_x), wrap(1, cursor[2]+dy, coordinate_y)
+
+        while can_x ~= cursor[1] or can_y ~= cursor[2] do
+            if map[can_x][can_y] and map[can_x][can_y] ~= map[cursor[1]][cursor[2]] then
+                break
+            else
+                -- Nothing to do.
+            end
+
+            can_x, can_y = wrap(1, can_x+dx, coordinate_x), wrap(1, can_y+dy, coordinate_y)
+        end
+        cursor[1], cursor[2] = can_x,can_y
+    end
+
+    --- Leaves the room
+    -- @tparam nil
+    -- @treturn nil
+    local function do_leave()
+        my_win_count = 0
+        op_win_count = 0
+        write_char_sel_settings_to_file()
+        json_send({leave_room=true})
+    end
+
+    -- Trigger some variables inicialization and check conection
+    -- @tparam nil
+    -- @return nil or dump_data error message
+    local function main_character_2p_net_vs()
+        -- Local main_character_2p_net_vs fuction begin
+
+        -- Check if the room was created trying to initializate global_initialize_room_msg
+        -- @param retry_limit limit of retry
+        -- @treturn nil
+        local function try_create_room(retry_limit)
+            local retries = 0
+            while not global_initialize_room_msg and retries < retry_limit do
+                for _, message in ipairs(this_frame_messages) do
+                    if message.create_room or message.character_select or message.spectate_request_granted then
+                        global_initialize_room_msg = message
+                    else
+                        -- Nothing to do.
+                    end
+                end
+    
+                gprint("Waiting for room initialization...", X_STRING_CENTER, Y_STRING_CENTER)
+                coroutine_wait()
+                do_messages()
+    
+                retries = retries + 1
+            end
+
+            if room_number_last_spectated and retries >= retry_limit and currently_spectating then
+                request_spectate(room_number_last_spectated)
+                retries = 0
+    
+                -- runs if the player has lost connection
+                while not global_initialize_room_msg and retries < retry_limit do
+                    for _, message in ipairs(this_frame_messages) do
+                        if message.create_room or message.character_select or message.spectate_request_granted then
+                            global_initialize_room_msg = message
+                        end
+                    end
+    
+                    gprint("Lost connection.  Trying to rejoin...", X_STRING_CENTER, Y_STRING_CENTER)
+                    coroutine_wait()
+                    do_messages()
+    
+                    retries = retries + 1
+                        
+                end
+            else
+                -- Nothing to do.
+            end
+        
+        end
+
+
+        -- Local main_character_2p_net_vs fuction end
+
+        local opponent_connected = false
+        local retry_limit = 500
+        
+
+        try_create_room(retry_limit)
+
+
+        -- runs if connection has failed
+        if not global_initialize_room_msg then
+            return main_dumb_transition, {main_select_mode, "Failed to connect.\n\nReturning to main menu", 60, 300}
+        else
+            -- Nothing to do.
+        end
+
+        message = global_initialize_room_msg
+        global_initialize_room_msg = nil
+        if message.ratings then
+            global_current_room_ratings = message.ratings
+        end
+
+        global_my_state = message.a_menu_state
+        global_op_state = message.b_menu_state
+
+        
+        if message.your_player_number then
+            my_player_number = message.your_player_number
+        elseif currently_spectating then
+            my_player_number = 1
+        -- Thats right its checking if is nil and different of zero
+        elseif my_player_number and my_player_number ~= 0 then
+            print("We assumed our player number is still " .. my_player_number)
+        else
+            error("We never heard from the server as to what player number we are")
+            print("Error: The server never told us our player number.  Assuming it is 1")
+            my_player_number = 1
+        end
+
+        if message.op_player_number then
+            op_player_number = message.op_player_number or op_player_number
+        elseif currently_spectating then
+            op_player_number = 2
+        -- Thats right its checking if is nil and different of zero
+        elseif op_player_number and op_player_number ~= 0 then
+            print("We assumed op player number is still " .. op_player_number)
+        else
+            error("We never heard from the server as to what player number we are")
+            print("Error: The server never told us our player number.  Assuming it is 2")
+            op_player_number = 2
+        end
+
+        if message.win_counts then
+            update_win_counts(message.win_counts)
+        else
+            -- Nothing to do.
+        end
+        if message.replay_of_match_so_far then
+            replay_of_match_so_far = message.replay_of_match_so_far
+        else
+            -- Nothing to do.
+        end
+
+        if message.ranked then
+            matchType = "Ranked"
+            match_type_message = ""
+        else 
+            matchType = "Casual"
+        end
+
+        if currently_spectating then
+            P1 = {panel_buffer="", gpanel_buffer=""}
+            print("we reset P1 buffers at start of main_character_select()")
+        else
+            -- Nothing to do.
+        end
+        P2 = {
+            panel_buffer="",
+            gpanel_buffer=""
+            }
+        print("we reset P2 buffers at start of main_character_select()")
+        print("serverSupportsRanking: "..tostring(serverSupportsRanking))
+
+        local cursor,op_cursor, coordinate_x, coordinate_y = nil, nil, nil
+        -- If serverSupportsRanking is true then update map, else update update map
+        if serverSupportsRanking then
+            map = MAP_RANKING
+        else
+            map = MAP_DEFAULT
+        end
+
+    end
+
+    local function inicialization_2p_net_vs()
+        global_current_room_ratings = global_current_room_ratings or 
+            {{new=0, old=0, difference=0}, {new=0, old=0, difference=0}}
+
+        -- Win ratio of the current player
+        my_expected_win_ratio = (global_current_room_ratings[op_player_number].new
+            -global_current_room_ratings[my_player_number].new)
+            /rating_spread_modifier
+
+        my_expected_win_ratio = 100 * round(1/1 + 10^my_expected_win_ratio, 2)
+
+        -- Win ratio of the oponent player
+        op_expected_win_ratio = (global_current_room_ratings[my_player_number].new
+            -global_current_room_ratings[op_player_number].new)
+            /rating_spread_modifier
+
+        op_expected_win_ratio = 100 * round(1/1 + 10^op_expected_win_ratio, 2)
+
+    end
+
+    -- Local main_character_select fuction end
+    love.audio.stop()
+    local map = {}
+
+    if character_select_mode == "2p_net_vs" then
+        local return_value = main_character_2p_net_vs()
+        if return_value then
+            return return_value
+        else
+            -- Nothing to do.
+        end
+    else
+        -- Nothing to do.
+    end
+
+    if character_select_mode == "1p_vs_yourself" then
+        map = MAP_1P_VS_YOURSELF
+    else
+        -- Nothing to do.
+    end
+
+    local op_state = global_op_state or {character="lip", level=5, cursor="level", ready=false}
+    global_op_state = nil
+    cursor, op_cursor, coordinate_x, coordinate_y = {1, 1}, {1, 1}, 5, 7
+    local k = keyboard[1]
+    local up, down, left, right = {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+
+    my_state = global_my_state or
+        {character=CONFIG_TABLE.character, level=CONFIG_TABLE.level, cursor="level", ready=false}
+
+    global_my_state = nil
+    my_win_count = my_win_count or 0
+    local prev_state = shallowcpy(my_state)
+    op_win_count = op_win_count or 0
+
+    if character_select_mode == "2p_net_vs" then
+        inicialization_2p_net_vs()
+    else
+        -- Nothing to do.
+    end
+
+    if character_select_mode == "2p_net_vs" then
+        matchType = matchType or "Casual"
+        if matchType == "" then
+            matchType = "Casual" 
+        else
+            -- Nothing to do.
+        end
+    else
+        -- Nothing to do.
+    end
+
+    match_type_message = match_type_message or ""
+    local selected = false
+    local active_str = "level"
+    local selectable = {level=true, ready=true}
+
+
+
+    local name_to_xy = {}
+    print("character_select_mode = " .. (character_select_mode or "nil"))
+    print("map[1][1] = "..(map[1][1] or "nil"))
+    
+    for i=1, coordinate_x do
+        for j=1, coordinate_y do
+            if map[i][j] then
+               name_to_xy[map[i][j]] = {i,j}
+            else
+                -- Nothing to do.
+            end
+        end
+    end
+    
 
     print("got to LOC before net_vs_room character select loop")
     menu_clock = 0
