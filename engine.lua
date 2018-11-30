@@ -11,7 +11,28 @@ local garbage_bounce_time = #garbage_bounce_table
 local GARBAGE_DELAY = 52
 local clone_pool = {}
 
+-- ################################
+--     Stack class
+-- ################################
+--- defines a stack of panels
+Stack = class(function(self, which, mode, speed, difficulty, player_number)
+	assert(which, "Which param nil")
+	assert(mode, "Mode must exists")
+	self.character = uniformly(characters)
+	assert(self.character, "There are no characters")
+	self.max_health = 1
+	self.health = self.max_health
+	self.mode = mode or "endless"
+
+	-- call funtion to initialize gamemode
+	handle_gamemode(self)
+	initialize_variables(self)
+end)
+
 -- break main class function in smaller and more specialized functions
+--- read which mode was selected and call the proper functions for each mode
+-- @function handle_gamemode
+-- @param stack object
 function handle_gamemode(self)
 	if mode ~= "puzzle" then
 		self.do_first_row = true
@@ -53,19 +74,11 @@ function handle_gamemode(self)
 	end
 end
 
--- Stack of panels
-Stack = class(function(self, which, mode, speed, difficulty, player_number)
-	assert(which, "Which param nil")
-	assert(mode, "Mode must exists")
-	self.character = uniformly(characters)
-	assert(self.character, "There are no characters")
-	self.max_health = 1
-	self.health = self.max_health
-	self.mode = mode or "endless"
-
-	-- call funtion to initialize gamemode
-	handle_gamemode(self)
-
+-- break main class function in smaller and more specialized functions
+--- initialize Stack attributes
+-- @function initialize_variables
+-- @param stack object
+function initialize_variables(self)
 	self.garbage_cols = {
 		{1,2,3,4,5,6,idx=1},
 		{1,3,5,idx=1},
@@ -179,12 +192,13 @@ Stack = class(function(self, which, mode, speed, difficulty, player_number)
 
 	self.which = assert(which or 1)  -- Pk.which == k
 	self.player_number = assert(player_number or self.which)  -- player number according to the multiplayer server, for game outcome reporting
-
 	self.shake_time = 0
-
 	self.prev_states = {}
-end)
+end
 
+--- copy stack of panels
+-- @function Stack.mkcpy
+-- @param Stack, other object
 function Stack.mkcpy(self, other)
 	if other == nil then
 		if #clone_pool == 0 then
@@ -267,18 +281,28 @@ function Stack.mkcpy(self, other)
 	other.cur_col = self.cur_col
 	other.shake_time = self.shake_time
 	other.card_q = deepcpy(self.card_q)
+
 	return assert(other)
 end
 
+--- Sets the variable jrname based on jp state
+-- @function Stack.fromcpy
+-- @param Stack, other
 function Stack.fromcpy(self, other)
 	Stack.mkcpy(other,self)
 	self:remove_extra_rows()
 end
 
+-- ################################
+--     Panel class
+-- ################################
 Panel = class(function(p)
 	p:clear()
 end)
 
+--- clear all attributes and flags from panel
+-- @function Panel.clear
+-- @param Panel
 function Panel.clear(self)
 	-- color 0 is an empty panel.
 	-- colors 1-7 are normal colors, 8 is [!].
@@ -328,6 +352,9 @@ local exclude_hover_set = {
 	falling=true
 }
 
+-- @function Panel.exclude_hover
+-- @param Panel
+-- @return exclude_hover_set item or garbage
 function Panel.exclude_hover(self)
 	return exclude_hover_set[self.state] or self.garbage
 end
@@ -340,6 +367,10 @@ local exclude_match_set = {
 	dimmed=true,
 	falling=true
 }
+
+-- @function Panel.exclude_match
+-- @param Panel
+-- @return exclude_match_set or color or state
 function Panel.exclude_match(self)
 	if(exclude_match_set[self.state]) then
 		return exclude_match_set[self.state]
@@ -360,6 +391,10 @@ local exclude_swap_set = {
 	dimmed=true
 }
 
+--- invoke destructor on swap
+-- @function Panel.exclude_swap
+-- @param Panel
+-- @return exclude_swap_set or dont_swap or garbage
 function Panel.exclude_swap(self)
 	if (exclude_swap_set[self.state]) then
 		return exclude_swap_set[self.state]
@@ -370,6 +405,9 @@ function Panel.exclude_swap(self)
 	end
 end
 
+-- @function Panel.support_garbage
+-- @param Panel
+-- @return boolean or hovering
 function Panel.support_garbage(self)
 	return self.color ~= 0 or self.hovering
 end
@@ -386,19 +424,30 @@ local block_garbage_fall_set = {
 	swapping=true
 }
 
+-- @function Panel.block_garbage_fall
+-- @param Panel
+-- @return block_garbage_fall_set item or color
 function Panel.block_garbage_fall(self)
 	return block_garbage_fall_set[self.state] or self.color == 0
 end
 
+-- @function Panel.dangerous
+-- @param Panel
+-- @return boolean
 function Panel.dangerous(self)
 	return self.color ~= 0 and (self.state ~= "falling" or not self.garbage)
 end
 
+-- @function Panel.has_flags
+-- @param Panel
+-- @return boolean
 function Panel.has_flags(self)
 	return self.state ~= "normal" or self.is_swapping_from_left
 			or self.dont_swap or self.chaining
 end
 
+-- @function Panel.clear_flags
+-- @param Panel
 function Panel.clear_flags(self)
 	self.combo_index = nil
 	self.combo_size = nil
