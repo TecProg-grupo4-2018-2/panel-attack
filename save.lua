@@ -10,6 +10,10 @@ local sep = package.config:sub(1, 1) -- determines os directory separator (i.e. 
 
 log = require("log")
 
+-- ######################################
+--      Writing and read files functions
+-- #####################################
+
 --- Write data in a file and return status of pcall
 -- @function 
 -- @param file_name name of the file
@@ -53,6 +57,10 @@ function get_file_size(file_name)
     return file_size
 
 end
+
+-- ################################
+--      Save and read games files
+-- ################################
 
 
 --- write kyes.txt file
@@ -247,7 +255,11 @@ function read_user_id_file()
         log.error(err)
     end
 
-end
+end]
+
+-- ###############################
+--      UTILS functions
+-- ###############################
 
 --- this function is never called
 -- @function print_list
