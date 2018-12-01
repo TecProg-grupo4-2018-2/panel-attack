@@ -14,7 +14,7 @@ function load_img(image_path)
     local img 
     assert(image_path)  
     
-    -- if the path doesn't exist, creates the path 
+    -- if the path doesn't exist, creates the path -- T35
     function creates_image()
         img = love.image.newImageData("assets/"..(CONFIG_TABLE.assets_dir or
                                         default_assets_dir).."/"..image_path)
@@ -94,7 +94,6 @@ function menu_draw(img, x, y, rot, x_scale,y_scale)
         y_scale
     }
     })
-
 end
 
 --- draws the menu quad, the menu of right-cick
@@ -130,7 +129,6 @@ function menu_drawq(img, quad, x, y, rot, x_scale, y_scale)
         y_scale
     }
     })
-
 end
 
 --- generates rectangles 
@@ -188,7 +186,7 @@ function set_color(r, g, b, a)
     assert(g) 
     assert(b) 
     
-    -- current state of red, green, blue and alpha
+    -- current state of red, green, blue and alpha --T35
     local r_current = 0
     local g_current = 0
     local b_current = 0
@@ -197,7 +195,7 @@ function set_color(r, g, b, a)
 
     a = a or MAX_ALPHA
 
-    -- only do it if this color isn't the same as the previous one
+    -- only do it if this color isn't the same as the previous one --T35
     if r_current ~= r or g_current ~= g or b_current ~= b or a_current ~= a then
         r_current, g_current, b_current, a_current = r, g, b, a
         gfx_q:push({love.graphics.setColor, {r, g, b, a}})
@@ -213,6 +211,7 @@ local floor = math.floor
 -- @param nil
 -- @return nil 
 function graphics_init()
+    -- initializes IMG_panels --T35
     IMG_panels = {}
 
     for i = 1, 8 do
@@ -235,6 +234,7 @@ function graphics_init()
         "portrait"
     }
 
+    -- initializes IMG_garbage  -- T35
     IMG_garbage = {}
 
     for _, key in ipairs(characters) do
@@ -251,6 +251,7 @@ function graphics_init()
     local IMG_metal_l = load_img("metalend0.png")
     local IMG_metal_r = load_img("metalend1.png")
 
+    -- initializes IMG_cards  -- T35
     IMG_cards = {}
     IMG_cards[true] = {}
     IMG_cards[false] = {}
@@ -269,6 +270,7 @@ function graphics_init()
         IMG_cards[true][i] = load_img("chain00.png")
     end
 
+    -- initializes IMG_character_icons -- T35
     IMG_character_icons = {}
 
     for k, name in ipairs(characters) do
@@ -276,6 +278,8 @@ function graphics_init()
     end
 
     local MAX_SUPPORTED_PLAYERS = 2
+    
+    -- initializes IMG_char_sel_cursors --T35
     IMG_char_sel_cursors = {}
 
     for player_num = 1, MAX_SUPPORTED_PLAYERS do
@@ -288,32 +292,27 @@ function graphics_init()
         end
     end
 
+    -- initializes IMG_char_sel_cursor_halves  -- T35
     IMG_char_sel_cursor_halves = {left={}, right={}}
 
     for player_num = 1, MAX_SUPPORTED_PLAYERS do -- position cursor
         IMG_char_sel_cursor_halves.left[player_num] = {}
+        IMG_char_sel_cursor_halves.right[player_num] = {}
 
-        for position_num = 1, 2 do
+        for position_num = 1, 2 do  
             local cur_width_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
             local half_width, half_height = cur_width_height/2, cur_width_height/2
 
             IMG_char_sel_cursor_halves["left"][player_num][position_num] =
                 love.graphics.newQuad(0, 0, half_width, cur_width_height, cur_width_height, 
                                          cur_width_height)
-        end
-
-        IMG_char_sel_cursor_halves.right[player_num] = {}
-
-        for position_num = 1, 2 do
-            local cur_width_height = IMG_char_sel_cursors[player_num][position_num]:getDimensions()
-            local half_width, half_height = cur_width_height/2, cur_width_height/2
-
             IMG_char_sel_cursor_halves.right[player_num][position_num] = 
                 love.graphics.newQuad(half_width,0,half_width,cur_width_height,
                                         cur_width_height, cur_width_height)
         end
     end
 
+    -- initalizes character_display_names  -- T35
     character_display_names = {} -- players names 
 
     for k, original_name in ipairs(characters) do -- show names
@@ -332,10 +331,7 @@ function graphics_init()
         end
     end
 
-    for k, v in pairs(character_display_names) do
-        print(k.." = "..v)
-    end
-
+    -- initializes character_display_names_to_original_names  --T35
     character_display_names_to_original_names = {}
 
     for k, v in pairs(character_display_names) do
@@ -362,33 +358,11 @@ function Stack.draw_cards(self)
     end
 end
 
---- subscribe the method render of Stack class for render  
+--- draw the blocks of the game 
 -- @function Stack.render 
 -- @param self object 
 -- @return nil 
-function Stack.render(self)
-    assert(self)
-    
-    local ceil = math.ceil --rounding 
-    local mouse_x, mouse_y -- coordinates of mouse
-    
-    if CONFIG_TABLE.debug_mode then
-        mouse_x, mouse_y = love.mouse.getPosition()
-        mouse_x = mouse_y / GFX_SCALE
-        mouse_y = mouse_y / GFX_SCALE
-    else 
-        --nothing to do
-    end
-
-    if P1 == self then
-        draw(IMG_garbage[self.character].portrait, self.pos_x, self.pos_y)
-    else
-        draw(IMG_garbage[self.character].portrait, self.pos_x+96, self.pos_y, 0, -1)
-    end
-
-    local shake_idx = #shake_arr - self.shake_time
-    local shake = ceil((shake_arr[shake_idx] or 0) * 13)
-
+function draw_block(self, shake)   -- T36 -- T34
     for row = 0, self.height do
         for col = 1, self.width do
             local panel = self.panels[row][col]
@@ -400,13 +374,13 @@ function Stack.render(self)
 
                 if panel.garbage then
                     local imgs = {flash=IMG_metal_flash}
-                    
+
                     if not panel.metal then
                         imgs = IMG_garbage[self.garbage_target.character]
                     end
 
                     if panel.x_offset == 0 and panel.y_offset == 0 then
-                        -- draw the entire block
+                        -- draw the entire block            -- T35
                         if panel.metal then
                             draw(IMG_metal_l, draw_x, draw_y)
                             draw(IMG_metal_r, draw_x+16*(panel.width-1)+8,draw_y)
@@ -424,22 +398,22 @@ function Stack.render(self)
                             for i = 0, height-1 do
                                 for j = 1, width-1 do
                                     draw((odd or height<3) and imgs.filler1 or 
-                                           imgs.filler2, draw_x+16*j-8, top_y+16*i) 
+                                    imgs.filler2, draw_x+16*j-8, top_y+16*i) 
                                     odd = not odd
                                 end
                             end
 
                             if height % 2 == 1 then
                                 draw(imgs.face, draw_x+8*(width-1), 
-                                        top_y+16*((height-1)/2))
+                                top_y+16*((height-1)/2))
                             else
                                 draw(imgs.doubleface, draw_x+8*(width-1), 
-                                        top_y+16*((height-2)/2))
+                                top_y+16*((height-2)/2))
                             end
 
                             draw(imgs.left, draw_x, top_y, 0, 1, height*16)
                             draw(imgs.right, draw_x+16*(width-1)+8, top_y, 0, 
-                                    1, height*16)
+                            1, height*16)
                             draw(imgs.top, draw_x, top_y, 0, width*16)
                             draw(imgs.bot, draw_x, draw_y+14, 0, width*16)
                             draw(imgs.topleft, draw_x, top_y)
@@ -463,31 +437,33 @@ function Stack.render(self)
                             elseif panel.y_offset == -1 then
                                 draw(IMG_panels[panel.color][
                                 garbage_bounce_table[panel.timer] or 1], 
-                                    draw_x, draw_y)
+                                draw_x, draw_y)
                             end
                         else
                             draw(imgs.flash, draw_x, draw_y)
                         end
                     end
 
-                    -- this adds the drawing of state flags to garbage panels 
+                    -- this adds the drawing of state flags to garbage panels -- T35
                     if CONFIG_TABLE.debug_mode then
                         gprint(panel.state, draw_x*3, draw_y*3)
                         gprint(panel.chaining and "chaining" or "nah", 
-                                draw_x*3, draw_y*3+30)
+                        draw_x*3, draw_y*3+30)
 
                         if panel.match_anyway ~= nil then
                             gprint(tostring(panel.match_anyway), draw_x*3, 
-                                    draw_y*3+10)
+                            draw_y*3+10)
                             if panel.debug_tag then
                                 gprint(tostring(panel.debug_tag), 
-                                    draw_x*3, draw_y*3+20)
+                                draw_x*3, draw_y*3+20)
                             end
                         end
                     else 
                         -- nothing to do
                     end
+
                 else
+                    -- draw the frame according with the panel state   --T35
                     if panel.state == "matched" then
                         local flash_time = self.FRAMECOUNT_MATCH - panel.timer
 
@@ -512,7 +488,7 @@ function Stack.render(self)
                         draw_frame = 7
                     elseif self.danger_col[col] then
                         draw_frame = danger_bounce_table[wrap(1,self.danger_timer+1+floor((col-1)/2),
-                                                            #danger_bounce_table)]
+                        #danger_bounce_table)]
                     else
                         draw_frame = 1
                     end
@@ -523,35 +499,75 @@ function Stack.render(self)
                         gprint(panel.state, draw_x*3, draw_y*3)
                         if panel.match_anyway ~= nil then
                             gprint(tostring(panel.match_anyway), draw_x*3, 
-                                    draw_y*3+10)
+                            draw_y*3+10)
                             if panel.debug_tag then
                                 gprint(tostring(panel.debug_tag), draw_x*3,
-                                    draw_y*3+20)
+                                draw_y*3+20)
                             end
                         end
                         gprint(panel.chaining and "chaining" or 
-                                "nah", draw_x*3, draw_y*3+30)
+                        "nah", draw_x*3, draw_y*3+30)
                     end
                 end
             end
 
             if CONFIG_TABLE.debug_mode and mx >= draw_x and mx < draw_x + 16 and 
-                    my >= draw_y and my < draw_y + 16 then
+                my >= draw_y and my < draw_y + 16 then
                 mouse_panel = {row, col, panel}
                 draw(IMG_panels[4][1], draw_x+16/3, draw_y+16/3, 0, 0.33333333,
-                        0.3333333)
+                0.3333333)
             else
                 -- nothing to do
             end
         end
     end
+end
 
-    local IMG_frame = load_img("frame.png")
-    local IMG_wall = load_img("wall.png")
+--- print when is danger  
+-- @function Stack.render 
+-- @param self object 
+-- @return nil 
+function print_in_danger(self)  -- T36
+    gprint("cleared: "..(self.panels_cleared or 0), self.score_x, 265)
+    gprint("metal q: "..(self.metal_panels_queued or 0), self.score_x, 280)
 
-    draw(IMG_frame, self.pos_x-4, self.pos_y-4)
-    draw(IMG_wall, self.pos_x, self.pos_y - shake + self.height*16)
+    if self.danger then
+        gprint("danger", self.score_x,235)
+    end
 
+    if self.danger_music then
+        gprint("danger music", self.score_x, 250)
+    end
+
+    -- select the inputs to print    -- T35
+    if self.input_state then
+        local iraise, iswap, iup, idown, ileft, iright = unpack(base64decode[self.input_state])
+        local inputs_to_print = "inputs:"
+
+        if iraise then
+            inputs_to_print = inputs_to_print.."\nraise"
+        elseif iswap then
+            inputs_to_print = inputs_to_print.."\nswap"
+        elseif iup then
+            inputs_to_print = inputs_to_print.."\nup"
+        elseif idown then
+            inputs_to_print = inputs_to_print.."\ndown"
+        elseif ileft then
+            inputs_to_print = inputs_to_print.."\nleft"
+        elseif iright then
+            inputs_to_print = inputs_to_print.."\nright"
+        end
+    else
+        -- nothing to do
+    end
+    gprint(inputs_to_print, self.score_x, 295)
+end
+
+--- print informations that is on the side
+-- @function Stack.render 
+-- @param self object 
+-- @return nil 
+function print_side_informations(self) -- T34 -- T36
     if self.mode == "puzzle" then
         gprint("Moves: "..self.puzzle_moves, self.score_x, 100)
         gprint("Frame: "..self.CLOCK, self.score_x, 130)
@@ -560,6 +576,7 @@ function Stack.render(self)
         gprint("Speed: "..self.speed, self.score_x, 130)
         gprint("Frame: "..self.CLOCK, self.score_x, 145)
 
+        -- the informations vary with the mode of game     -- T35
         if self.mode == "time" then
             local time_left = 120 - self.CLOCK/60
             local mins = floor(time_left/60) -- currents minutes 
@@ -577,38 +594,7 @@ function Stack.render(self)
         gprint("Pre stop: "..self.pre_stop_time, self.score_x, 220)
 
         if CONFIG_TABLE.debug_mode then
-            gprint("cleared: "..(self.panels_cleared or 0), self.score_x, 265)
-            gprint("metal q: "..(self.metal_panels_queued or 0), self.score_x, 280)
-
-            if self.danger then
-                gprint("danger", self.score_x,235)
-            end
-            
-            if self.danger_music then
-                gprint("danger music", self.score_x, 250)
-            end
-
-            if self.input_state then
-                local iraise, iswap, iup, idown, ileft, iright = unpack(base64decode[self.input_state])
-                local inputs_to_print = "inputs:"
-
-                if iraise then
-                    inputs_to_print = inputs_to_print.."\nraise"
-                elseif iswap then
-                    inputs_to_print = inputs_to_print.."\nswap"
-                elseif iup then
-                    inputs_to_print = inputs_to_print.."\nup"
-                elseif idown then
-                    inputs_to_print = inputs_to_print.."\ndown"
-                elseif ileft then
-                    inputs_to_print = inputs_to_print.."\nleft"
-                elseif iright then
-                    inputs_to_print = inputs_to_print.."\nright"
-                end
-            else
-                -- nothing to do
-            end
-                gprint(inputs_to_print, self.score_x, 295)
+            print_in_danger(self)
         end
 
         if match_type then
@@ -617,6 +603,44 @@ function Stack.render(self)
             -- nothing to do
         end
     end
+end
+
+--- subscribe the method render of Stack class for render  
+-- @function Stack.render 
+-- @param self object 
+-- @return nil 
+function Stack.render(self)  -- T36
+    assert(self)
+    
+    local ceil = math.ceil -- rounding up
+    local mouse_x, mouse_y -- coordinates of mouse
+    
+    if CONFIG_TABLE.debug_mode then
+        mouse_x, mouse_y = love.mouse.getPosition()
+        mouse_x = mouse_y / GFX_SCALE
+        mouse_y = mouse_y / GFX_SCALE
+    else 
+        --nothing to do
+    end
+
+    if P1 == self then
+        draw(IMG_garbage[self.character].portrait, self.pos_x, self.pos_y)
+    else
+        draw(IMG_garbage[self.character].portrait, self.pos_x+96, self.pos_y, 0, -1)
+    end
+
+    local shake_idx = #shake_arr - self.shake_time
+    local shake = ceil((shake_arr[shake_idx] or 0) * 13)
+
+    draw_block(self, shake)
+
+    local IMG_frame = load_img("frame.png")
+    local IMG_wall = load_img("wall.png")
+
+    draw(IMG_frame, self.pos_x-4, self.pos_y-4)
+    draw(IMG_wall, self.pos_x, self.pos_y - shake + self.height*16)
+
+    print_side_informations(self)
 
     self:draw_cards()
     self:render_cursor()
@@ -636,6 +660,7 @@ function scale_letterbox(width, height, w_ratio, h_ratio)
     local height_ratio = height / h_ratio
     local width_ratio = width / w_ratio 
 
+    -- sacaled height is proportional to width_ratio --T35
     if height_ratio > width_ratio then
         local scaled_height = h_ratio * width_ratio
         return 0, (height - scaled_height) / 2, width, scaled_height
@@ -666,4 +691,3 @@ function Stack.render_cursor(self)
 
     draw(IMG_cursor[index], col+x, row+y+self.displacement)
 end
-
