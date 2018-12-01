@@ -186,9 +186,9 @@ end
     
 -- converts the seed to number, otherwise the seed receives a number
 -- @function read_csprng_seed_file
--- @param nil
+-- @param csprng_seed 
 -- @return nil
-function converts_seed(csprng_seed) 
+function converts_seed(csprng_seed) -- T36
     if tonumber(csprng_seed) then
         local temporary = assert(tonumber(csprng_seed)) 
 
@@ -205,11 +205,11 @@ end
 -- @function read_csprng_seed_file
 -- @param nil
 -- @return nil
-function read_csprng_seed_file()
+function read_csprng_seed_file() --T36
     local function read_file()
         local file = assert(io.open('csprng_seed.txt', 'r') ) 
 
-        --take the seed from the file, else create a new file with a standard seed
+        --take the seed from the file, else create a new file with a standard seed --T35
         if file then
             assert(io.input(file), "input is invalid") 
             csprng_seed = io.read('*all') 
